@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BillTrack Pro</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -476,10 +475,28 @@ const MSAL_CONFIG = {
   }
 };
 // ────────────────────────────────────────────────────────────────────
-// MSAL instance — initialized lazily to avoid "not defined" errors
+// MSAL — loaded dynamically to guarantee it exists before use
 let _msalInstance = null;
+async function loadMsalScript() {
+  return new Promise((resolve, reject) => {
+    if (window.msal) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
+    script.onload = () => resolve();
+    script.onerror = () => {
+      // fallback to Microsoft CDN
+      const s2 = document.createElement('script');
+      s2.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
+      s2.onload = () => resolve();
+      s2.onerror = () => reject(new Error('Could not load MSAL library from any CDN'));
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(script);
+  });
+}
 async function getMsalInstance() {
   if (!_msalInstance) {
+    await loadMsalScript();
     _msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
     await _msalInstance.initialize();
   }
