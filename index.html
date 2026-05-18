@@ -477,27 +477,41 @@ const MSAL_CONFIG = {
 // ────────────────────────────────────────────────────────────────────
 // MSAL — loaded dynamically to guarantee it exists before use
 let _msalInstance = null;
-async function loadMsalScript() {
+function loadScript(src) {
   return new Promise((resolve, reject) => {
-    if (window.msal) { resolve(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
-    script.onload = () => resolve();
-    script.onerror = () => {
-      // fallback to Microsoft CDN
-      const s2 = document.createElement('script');
-      s2.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
-      s2.onload = () => resolve();
-      s2.onerror = () => reject(new Error('Could not load MSAL library from any CDN'));
-      document.head.appendChild(s2);
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => {
+      if (window.msal) resolve();
+      else reject(new Error('Script loaded but msal not defined: ' + src));
     };
-    document.head.appendChild(script);
+    s.onerror = () => reject(new Error('Failed to load: ' + src));
+    document.head.appendChild(s);
   });
+}
+async function loadMsalScript() {
+  if (window.msal) return;
+  const cdns = [
+    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+    'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js',
+    'https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js'
+  ];
+  for (const cdn of cdns) {
+    try {
+      await loadScript(cdn);
+      console.log('MSAL loaded from:', cdn);
+      return;
+    } catch(e) {
+      console.warn('CDN failed, trying next:', cdn, e.message);
+    }
+  }
+  throw new Error('Could not load Microsoft sign-in library from any source. Check your internet connection.');
 }
 async function getMsalInstance() {
   if (!_msalInstance) {
     await loadMsalScript();
-    _msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+    if (!window.msal) throw new Error('msal library not available after load attempt');
+    _msalInstance = new window.msal.PublicClientApplication(MSAL_CONFIG);
     await _msalInstance.initialize();
   }
   return _msalInstance;
@@ -530,17 +544,22 @@ async function getToken(){
 async function signInToMicrosoft(){
   try{
     updateSignInBtn('loading');
+    console.log('Step 1: Loading MSAL...');
+    await loadMsalScript();
+    console.log('Step 2: MSAL loaded, window.msal=', typeof window.msal);
     const instance = await getMsalInstance();
+    console.log('Step 3: Got instance, opening popup...');
     const r = await instance.loginPopup({
       scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],
       prompt:'select_account'
     });
     if(r){
+      console.log('Step 4: Signed in successfully');
       updateSignInBtn(true);
       await loadSharePointData();
     }
   }catch(e){
-    console.error('Sign in error:', e);
+    console.error('Sign in error full:', e);
     alert('Sign in failed: '+e.message);
     updateSignInBtn(false);
   }
