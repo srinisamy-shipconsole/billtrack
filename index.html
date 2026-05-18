@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BillTrack Pro</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -458,18 +459,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
 const STORAGE_KEY='billtrack_pro_v1';
 const AUDIT_KEY='billtrack_audit_v1';
 const SETTINGS_KEY='billtrack_settings_v1';
-// ── CREDENTIALS — fill in your three values below ──────────────────
+// ── CREDENTIALS ─────────────────────────────────────────────────────
+const CLIENT_ID = "fee2b468-48ca-42b3-aad0-94a9f24d474c";
+const TENANT_ID = "835c8631-c98e-45c3-828d-71faa002b021";
+const SHAREPOINT_SITE = "https://shipconsole.sharepoint.com/sites/ProjectBilling";
+const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const MSAL_CONFIG = {
   auth: {
-    clientId: "fee2b468-48ca-42b3-aad0-94a9f24d474c",
-    authority: "https://login.microsoftonline.com/835c8631-c98e-45c3-828d-71faa002b021",
-    redirectUri: window.location.href
+    clientId: CLIENT_ID,
+    authority: "https://login.microsoftonline.com/" + TENANT_ID,
+    redirectUri: window.location.href.split('?')[0].split('#')[0]
+  },
+  cache: {
+    cacheLocation: "sessionStorage",
+    storeAuthStateInCookie: false
   }
 };
-const msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
-const SHAREPOINT_SITE = "shipconsole.sharepoint.com/sites/ProjectBilling";
-const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 // ────────────────────────────────────────────────────────────────────
+// MSAL instance — initialized lazily to avoid "not defined" errors
+let _msalInstance = null;
+async function getMsalInstance() {
+  if (!_msalInstance) {
+    _msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+    await _msalInstance.initialize();
+  }
+  return _msalInstance;
+}
 
 let contracts=[];
 let auditLog=[];
@@ -482,27 +497,17 @@ let pdfFile=null;
 
 async function getToken(){
   try{
-    const instance=window._msalInstance||msalInstance;
-    await instance.initialize();
-    const accounts=instance.getAllAccounts();
+    await msalInstance.initialize();
+    const accounts=msalInstance.getAllAccounts();
     const request={scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:accounts[0]};
-    try{const r=await instance.acquireTokenSilent(request);return r.accessToken;}
-    catch{const r=await instance.loginPopup(request);return r.accessToken;}
+    try{const r=await msalInstance.acquireTokenSilent(request);return r.accessToken;}
+    catch{const r=await msalInstance.loginPopup(request);return r.accessToken;}
   }catch(e){console.error('Auth error:',e);return null;}
 }
 async function signInToMicrosoft(){
   try{
-    const msalConfig={
-      auth:{
-        clientId:MSAL_CONFIG.auth.clientId,
-        authority:MSAL_CONFIG.auth.authority,
-        redirectUri:MSAL_CONFIG.auth.redirectUri
-      }
-    };
-    const freshInstance=new msal.PublicClientApplication(msalConfig);
-    await freshInstance.initialize();
-    window._msalInstance=freshInstance;
-    const r=await freshInstance.loginPopup({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All']});
+    await msalInstance.initialize();
+    const r=await msalInstance.loginPopup({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All']});
     if(r){updateSignInBtn(true);await loadSharePointData();}
   }catch(e){alert('Sign in failed: '+e.message);}
 }
@@ -516,8 +521,8 @@ function updateSignInBtn(signedIn){
 }
 async function loadSharePointData(){
   try{
-    const token=await getToken();
-    if(!token){console.warn('No token, using local storage');return false;}
+    const token = await getToken();
+    if(!token){ console.warn('No token — please click Sign in to Microsoft'); return false; }
     const headers={Authorization:'Bearer '+token};
     const siteUrl=SHAREPOINT_SITE.replace('https://','');
     const parts=siteUrl.split('/sites/');
@@ -594,20 +599,19 @@ function loadAll(){
   try{const a=localStorage.getItem(AUDIT_KEY);if(a)auditLog=JSON.parse(a);}catch(e){}
   try{const st=localStorage.getItem(SETTINGS_KEY);if(st)Object.assign(settings,JSON.parse(st));}catch(e){}
   applySettings();
-  // Try silent SharePoint auth first, fall back to sample data
+  // Try silent SharePoint auth, fall back to sample data
   (async()=>{
     try{
-      const instance=window._msalInstance||msalInstance;
-      await instance.initialize();
-      const accounts=instance.getAllAccounts();
-      if(accounts.length>0){
-        const loaded=await loadSharePointData();
-        if(loaded)return;
+      const instance = await getMsalInstance();
+      const accounts = instance.getAllAccounts();
+      if(accounts.length > 0){
+        const loaded = await loadSharePointData();
+        if(loaded) return;
       }
-    }catch(e){console.log('Silent auth skipped:',e);}
-    // Fall back to local storage or sample data
-    try{const s=localStorage.getItem(STORAGE_KEY);if(s){contracts=JSON.parse(s);render();return;}}catch(e){}
-    contracts=getSampleData();render();
+    } catch(e){ console.log('Silent auth skipped:', e); }
+    // Fall back to sample data
+    contracts = getSampleData();
+    render();
   })();
 }
 function saveContracts(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(contracts));}catch(e){}}
