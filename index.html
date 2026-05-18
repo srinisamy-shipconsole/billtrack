@@ -514,26 +514,52 @@ let pdfFile=null;
 
 async function getToken(){
   try{
-    await msalInstance.initialize();
-    const accounts=msalInstance.getAllAccounts();
-    const request={scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:accounts[0]};
-    try{const r=await msalInstance.acquireTokenSilent(request);return r.accessToken;}
-    catch{const r=await msalInstance.loginPopup(request);return r.accessToken;}
+    const instance = await getMsalInstance();
+    const accounts = instance.getAllAccounts();
+    if(!accounts.length){ console.warn('Not signed in'); return null; }
+    const request = {scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:accounts[0]};
+    try{
+      const r = await instance.acquireTokenSilent(request);
+      return r.accessToken;
+    } catch(e){
+      const r = await instance.loginPopup(request);
+      return r.accessToken;
+    }
   }catch(e){console.error('Auth error:',e);return null;}
 }
 async function signInToMicrosoft(){
   try{
-    await msalInstance.initialize();
-    const r=await msalInstance.loginPopup({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All']});
-    if(r){updateSignInBtn(true);await loadSharePointData();}
-  }catch(e){alert('Sign in failed: '+e.message);}
+    updateSignInBtn('loading');
+    const instance = await getMsalInstance();
+    const r = await instance.loginPopup({
+      scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],
+      prompt:'select_account'
+    });
+    if(r){
+      updateSignInBtn(true);
+      await loadSharePointData();
+    }
+  }catch(e){
+    console.error('Sign in error:', e);
+    alert('Sign in failed: '+e.message);
+    updateSignInBtn(false);
+  }
 }
-function updateSignInBtn(signedIn){
+function updateSignInBtn(state){
   const btn=document.getElementById('signin-btn');
   if(!btn)return;
-  if(signedIn){
+  if(state==='loading'){
+    btn.innerHTML='<i class="ti ti-loader"></i> Signing in...';
+    btn.style.background='#EBF3FB';btn.style.borderColor='#185FA5';btn.style.color='#185FA5';
+    btn.disabled=true;
+  } else if(state===true){
     btn.innerHTML='<i class="ti ti-check"></i> Connected to Microsoft';
     btn.style.background='#E1F5EE';btn.style.borderColor='#0F6E56';btn.style.color='#0F6E56';
+    btn.disabled=false;
+  } else {
+    btn.innerHTML='<i class="ti ti-brand-windows"></i> Sign in to Microsoft';
+    btn.style.background='';btn.style.borderColor='#185FA5';btn.style.color='#185FA5';
+    btn.disabled=false;
   }
 }
 async function loadSharePointData(){
