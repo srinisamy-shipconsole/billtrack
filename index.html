@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BillTrack Pro</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;background:#f5f5f3;height:100vh;overflow:hidden}
+.app{display:flex;height:100vh}
+.sidebar{width:230px;min-width:230px;border-right:1px solid #e5e5e0;padding:1rem;display:flex;flex-direction:column;gap:3px;background:#fff;overflow-y:auto}
+.logo{font-size:15px;font-weight:700;color:#185FA5;padding:0 8px 14px;border-bottom:1px solid #e5e5e0;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.logo span{color:#1a1a1a;font-weight:400;font-size:12px}
+.nav-section{font-size:10px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.08em;padding:10px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer;color:#666;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:#f5f5f3;color:#1a1a1a}
+.nav-item.active{background:#EBF3FB;color:#185FA5;font-weight:500}
+.nav-item i{font-size:16px;width:18px}
+.nav-badge{margin-left:auto;background:#E24B4A;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px}
+.nav-badge.blue{background:#185FA5}
+.nav-badge.green{background:#0F6E56}
+.main{flex:1;overflow-y:auto;padding:2rem;background:#f5f5f3}
+.view{display:none}
+.view.active{display:block}
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap}
+.page-title{font-size:20px;font-weight:700}
+.page-sub{font-size:13px;color:#888;margin-top:2px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#1a1a1a;display:inline-flex;align-items:center;gap:6px;transition:all .15s;font-family:inherit;font-weight:500}
+.btn:hover{background:#f5f5f3}
+.btn.primary{background:#185FA5;color:#fff;border-color:#185FA5}
+.btn.primary:hover{background:#0C447C}
+.btn.success{background:#0F6E56;color:#fff;border-color:#0F6E56}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn.danger{color:#A32D2D;border-color:#F09595;background:#FCEBEB}
+.btn.danger:hover{background:#F7C1C1}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem}
+.stat-card{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e5e5e0}
+.stat-label{font-size:11px;color:#888;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.stat-val{font-size:20px;font-weight:700}
+.stat-val.green{color:#0F6E56}.stat-val.amber{color:#854F0B}.stat-val.blue{color:#185FA5}.stat-val.red{color:#A32D2D}.stat-val.purple{color:#534AB7}
+.contracts-list{display:flex;flex-direction:column;gap:10px}
+.contract-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;overflow:hidden}
+.contract-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;transition:background .15s}
+.contract-header:hover{background:#fafaf8}
+.contract-name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.contract-meta{font-size:12px;color:#888;margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+.contract-meta span{display:flex;align-items:center;gap:4px}
+.contract-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.active{background:#E1F5EE;color:#0F6E56}
+.badge.completed{background:#f0f0ee;color:#666}
+.badge.paused{background:#FAEEDA;color:#633806}
+.badge.po{background:#EBF3FB;color:#185FA5}
+.chevron{transition:transform .2s;font-size:15px;color:#aaa}
+.chevron.open{transform:rotate(180deg)}
+.ms-table-wrap{border-top:1px solid #f0f0ee;overflow-x:auto}
+.ms-table{width:100%;border-collapse:collapse;font-size:13px;min-width:800px}
+.ms-table th{background:#fafaf8;padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:#999;border-bottom:1px solid #efefed;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.ms-table td{padding:10px 14px;border-bottom:1px solid #f5f5f3;vertical-align:middle}
+.ms-table tr:last-child td{border-bottom:none}
+.ms-table tr:hover td{background:#fafaf8}
+.ms-name{font-weight:500}
+.ms-amount{font-weight:700}
+.status-sel{font-size:12px;padding:5px 8px;border-radius:8px;border:1px solid #e0e0e0;background:#fff;color:#1a1a1a;cursor:pointer;font-family:inherit;min-width:148px}
+.status-pending{color:#854F0B;background:#FFFBF5}
+.status-ready{color:#185FA5;background:#EBF3FB}
+.status-invoiced{color:#0F6E56;background:#E8F7F2}
+.status-deferred{color:#888;background:#f5f5f3}
+.status-paid{color:#534AB7;background:#EEEDFE}
+.due-soon{background:#FAEEDA;color:#633806;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;margin-left:4px;white-space:nowrap}
+.overdue{background:#FCEBEB;color:#A32D2D;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;margin-left:4px;white-space:nowrap}
+.notify-banner{border-radius:10px;padding:12px 16px;margin-bottom:1rem;font-size:13px;display:flex;align-items:flex-start;gap:10px}
+.notify-banner.green{background:#E1F5EE;border:1px solid #9FE1CB;color:#085041}
+.notify-banner.amber{background:#FAEEDA;border:1px solid #FAC775;color:#633806}
+.notify-banner.red{background:#FCEBEB;border:1px solid #F7C1C1;color:#A32D2D}
+.notify-banner i{font-size:18px;flex-shrink:0;margin-top:1px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:1.75rem;width:620px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.15);margin-bottom:40px}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:1rem}
+.form-label{font-size:11px;font-weight:700;color:#666;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.form-input{width:100%;padding:9px 11px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#1a1a1a;font-size:13px;font-family:inherit;transition:border .15s}
+.form-input:focus{outline:none;border-color:#185FA5}
+.form-input.sm{padding:6px 9px;font-size:12px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem;padding-top:1rem;border-top:1px solid #f0f0ee}
+.ms-section{border:1px solid #e5e5e0;border-radius:8px;overflow:hidden;margin-top:8px}
+.ms-section-header{background:#fafaf8;padding:8px 12px;display:grid;gap:8px;font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e5e0}
+.ms-entry{display:grid;gap:8px;align-items:start;padding:10px 12px;border-bottom:1px solid #f5f5f3}
+.ms-entry:last-child{border-bottom:none}
+.ms-entry-top{display:grid;grid-template-columns:1fr 90px 115px 80px 26px;gap:8px;align-items:center}
+.ms-entry-bottom{display:flex;gap:16px;padding-left:2px}
+.ms-type-label{font-size:12px;color:#666;display:flex;align-items:center;gap:5px;cursor:pointer}
+.ms-add-btn{font-size:12px;color:#185FA5;cursor:pointer;background:none;border:none;padding:10px 12px;display:flex;align-items:center;gap:4px;font-family:inherit;border-top:1px solid #f0f0ee;width:100%}
+.ms-add-btn:hover{background:#f5f5f3}
+.del-btn{cursor:pointer;color:#bbb;background:none;border:none;font-size:15px;padding:3px;border-radius:4px;display:flex;align-items:center}
+.del-btn:hover{color:#E24B4A;background:#FCEBEB}
+.finance-table{width:100%;border:1px solid #e5e5e0;border-radius:10px;overflow:hidden;border-collapse:separate;border-spacing:0;font-size:13px;background:#fff}
+.finance-table th{background:#fafaf8;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#999;border-bottom:1px solid #e5e5e0;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.finance-table td{padding:10px 14px;border-bottom:1px solid #f5f5f3;vertical-align:middle}
+.finance-table tr:last-child td{border-bottom:none}
+.finance-table tr:hover td{background:#fafaf8}
+.finance-table .total-row td{font-weight:700;background:#fafaf8;border-top:1px solid #e5e5e0}
+.filter-row{display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
+.filter-sel{font-size:12px;padding:7px 11px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#1a1a1a;cursor:pointer;font-family:inherit}
+.section-title{font-size:14px;font-weight:700;margin-bottom:10px;margin-top:1.5rem;display:flex;align-items:center;gap:6px}
+.section-title:first-child{margin-top:0}
+.empty-state{text-align:center;padding:3rem;color:#aaa;font-size:14px}
+.empty-state i{font-size:36px;display:block;margin-bottom:10px;color:#ddd}
+.action-btn{background:none;border:none;cursor:pointer;padding:6px;color:#bbb;border-radius:8px;font-size:16px;transition:all .15s;display:inline-flex;align-items:center}
+.action-btn:hover{background:#f5f5f3;color:#1a1a1a}
+.tabs{display:flex;gap:0;border-bottom:1px solid #e5e5e0;margin-bottom:1.5rem}
+.tab{padding:8px 16px;font-size:13px;cursor:pointer;border:none;background:none;color:#888;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab.active{color:#185FA5;border-bottom-color:#185FA5;font-weight:600}
+.tab:hover{color:#1a1a1a}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.audit-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3;font-size:13px}
+.audit-row:last-child{border-bottom:none}
+.audit-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.audit-dot.ready{background:#185FA5}.audit-dot.invoiced{background:#0F6E56}.audit-dot.deferred{background:#888}.audit-dot.pending{background:#854F0B}.audit-dot.paid{background:#534AB7}
+.audit-time{color:#aaa;font-size:11px;white-space:nowrap;flex-shrink:0;padding-top:2px}
+.chart-wrap{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+.chart-title{font-size:14px;font-weight:700;margin-bottom:1rem;color:#1a1a1a}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.invoice-input{font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid #e0e0e0;font-family:inherit;width:110px;background:#fff}
+.invoice-input:focus{outline:none;border-color:#185FA5}
+.payment-input{font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid #e0e0e0;font-family:inherit;width:115px;background:#fff}
+.inline-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.pill.recurring{background:#EBF3FB;color:#185FA5}
+.pill.one-time{background:#f0f0ee;color:#666}
+.settings-section{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.5rem;margin-bottom:1rem}
+.settings-title{font-size:14px;font-weight:700;margin-bottom:1rem;padding-bottom:10px;border-bottom:1px solid #f0f0ee}
+.settings-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f3;font-size:13px}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-weight:500}
+.settings-sub{font-size:12px;color:#888;margin-top:2px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#ddd;border-radius:22px;cursor:pointer;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider{background:#185FA5}
+.toggle input:checked+.toggle-slider:before{transform:translateX(18px)}
+.recurring-gen-section{background:#EBF3FB;border-radius:8px;padding:12px;margin-top:8px;display:none}
+.recurring-gen-section.show{display:block}
+.deferred-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+.deferred-modal-bg.open{display:flex}
+.deferred-modal{background:#fff;border-radius:12px;padding:1.5rem;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.invoiced-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+.invoiced-modal-bg.open{display:flex}
+.paid-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+.paid-modal-bg.open{display:flex}
+.pdf-drop{border:2px dashed #ddd;border-radius:8px;padding:2rem;text-align:center;cursor:pointer;transition:all .15s;color:#aaa;font-size:13px}
+.pdf-drop:hover,.pdf-drop.drag{border-color:#185FA5;background:#EBF3FB;color:#185FA5}
+.pdf-drop i{font-size:32px;display:block;margin-bottom:8px}
+.ai-results{background:#f5f5f3;border-radius:8px;padding:12px;margin-top:8px;font-size:12px;color:#666;display:none}
+.ai-results.show{display:block}
+.progress-bar{height:4px;background:#e5e5e0;border-radius:4px;margin-top:8px;overflow:hidden}
+.progress-fill{height:100%;background:#185FA5;border-radius:4px;transition:width .3s}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;margin-right:4px}
+.tag.overdue{background:#FCEBEB;color:#A32D2D}
+.tag.due-soon{background:#FAEEDA;color:#633806}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="logo"><i class="ti ti-receipt-2"></i> BillTrack <span>Pro</span></div>
+    <div class="nav-section">Overview</div>
+    <button class="nav-item active" onclick="showView('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+    <button class="nav-item" onclick="showView('analytics')" id="nav-analytics"><i class="ti ti-chart-bar"></i> Analytics</button>
+    <div class="nav-section">Billing</div>
+    <button class="nav-item" onclick="showView('contracts')" id="nav-contracts"><i class="ti ti-file-text"></i> Contracts</button>
+    <button class="nav-item" onclick="showView('upcoming')" id="nav-upcoming"><i class="ti ti-calendar-due"></i> Upcoming <span class="nav-badge" id="upcoming-badge" style="display:none">0</span></button>
+    <button class="nav-item" onclick="showView('finance')" id="nav-finance"><i class="ti ti-currency-dollar"></i> Finance view <span class="nav-badge blue" id="ready-badge" style="display:none">0</span></button>
+    <div class="nav-section">Records</div>
+    <button class="nav-item" onclick="showView('audit')" id="nav-audit"><i class="ti ti-history"></i> Audit log</button>
+    <button class="nav-item" onclick="showView('payments')" id="nav-payments"><i class="ti ti-coin"></i> Payments <span class="nav-badge green" id="paid-badge" style="display:none">0</span></button>
+    <div class="nav-section">Settings</div>
+    <button class="nav-item" onclick="showView('settings')" id="nav-settings"><i class="ti ti-settings"></i> Settings</button>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date"></div></div>
+        <div class="btn-row">
+          <button class="btn" onclick="showView('contracts');openAddContract()"><i class="ti ti-file-plus"></i> New contract</button>
+          <button class="btn primary" onclick="openPdfImport()"><i class="ti ti-sparkles"></i> Import from PDF</button>
+          <button class="btn" id="signin-btn" onclick="signInToMicrosoft()" style="border-color:#185FA5;color:#185FA5"><i class="ti ti-brand-windows"></i> Sign in to Microsoft</button>
+        </div>
+      </div>
+      <div class="stats-row" id="stats-row"></div>
+      <div id="dashboard-banners"></div>
+      <div class="contracts-list" id="dashboard-contracts"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="view" id="view-analytics">
+      <div class="page-header"><div><div class="page-title">Analytics</div><div class="page-sub">Revenue & billing overview</div></div></div>
+      <div class="charts-grid">
+        <div class="chart-wrap"><div class="chart-title">Monthly invoiced revenue</div><canvas id="chart-monthly" height="180"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Billing pipeline (next 6 months)</div><canvas id="chart-pipeline" height="180"></canvas></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-wrap"><div class="chart-title">Milestone status breakdown</div><canvas id="chart-status" height="180"></canvas></div>
+        <div class="chart-wrap"><div class="chart-title">Revenue by client</div><canvas id="chart-client" height="180"></canvas></div>
+      </div>
+    </div>
+
+    <!-- CONTRACTS -->
+    <div class="view" id="view-contracts">
+      <div class="page-header">
+        <div><div class="page-title">Contracts</div></div>
+        <div class="btn-row">
+          <button class="btn" onclick="openPdfImport()"><i class="ti ti-sparkles"></i> Import from PDF</button>
+          <button class="btn primary" onclick="openAddContract()"><i class="ti ti-plus"></i> Add contract</button>
+        </div>
+      </div>
+      <div class="contracts-list" id="all-contracts"></div>
+    </div>
+
+    <!-- UPCOMING -->
+    <div class="view" id="view-upcoming">
+      <div class="page-header"><div><div class="page-title">Upcoming milestones</div><div class="page-sub">Due within 60 days, excluding invoiced</div></div></div>
+      <div id="upcoming-content"></div>
+    </div>
+
+    <!-- FINANCE VIEW -->
+    <div class="view" id="view-finance">
+      <div class="page-header">
+        <div><div class="page-title">Finance view</div><div class="page-sub">Share this page with your finance team</div></div>
+      </div>
+      <div class="filter-row">
+        <select class="filter-sel" id="finance-month-filter" onchange="renderFinance()"><option value="all">All months</option></select>
+        <select class="filter-sel" id="finance-status-filter" onchange="renderFinance()">
+          <option value="all">All statuses</option>
+          <option value="ready">Ready to invoice</option>
+          <option value="pending">Pending approval</option>
+          <option value="invoiced">Invoiced</option>
+          <option value="paid">Paid</option>
+          <option value="deferred">Deferred</option>
+        </select>
+        <select class="filter-sel" id="finance-client-filter" onchange="renderFinance()"><option value="all">All clients</option></select>
+      </div>
+      <div id="finance-content"></div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="view" id="view-audit">
+      <div class="page-header"><div><div class="page-title">Audit log</div><div class="page-sub">Every status change, timestamped</div></div>
+        <button class="btn sm" onclick="clearAudit()"><i class="ti ti-trash"></i> Clear log</button>
+      </div>
+      <div id="audit-content"></div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="view" id="view-payments">
+      <div class="page-header"><div><div class="page-title">Payment tracking</div><div class="page-sub">Invoiced vs paid reconciliation</div></div></div>
+      <div id="payments-content"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="view" id="view-settings">
+      <div class="page-header"><div><div class="page-title">Settings</div></div></div>
+      <div class="settings-section">
+        <div class="settings-title"><i class="ti ti-user" style="color:#185FA5"></i> Your profile</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Your name</label><input class="form-input" id="set-name" placeholder="e.g. Alex Johnson" oninput="saveSetting('userName',this.value)"></div>
+          <div class="form-group"><label class="form-label">Your email</label><input class="form-input" id="set-email" placeholder="you@company.com" oninput="saveSetting('userEmail',this.value)"></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title"><i class="ti ti-mail" style="color:#185FA5"></i> Email notifications</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Notify finance when milestone is Ready to invoice</div><div class="settings-sub">Sends email to finance team email below</div></div>
+          <label class="toggle"><input type="checkbox" id="set-notif-ready" onchange="saveSetting('notifReady',this.checked)"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Notify me when a milestone is due in 7 days</div><div class="settings-sub">Sends to your email above</div></div>
+          <label class="toggle"><input type="checkbox" id="set-notif-due" onchange="saveSetting('notifDue',this.checked)"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Weekly Monday digest</div><div class="settings-sub">Summary of upcoming milestones every Monday morning</div></div>
+          <label class="toggle"><input type="checkbox" id="set-notif-weekly" onchange="saveSetting('notifWeekly',this.checked)"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="form-group" style="margin-top:1rem;margin-bottom:0">
+          <label class="form-label">Finance team email(s)</label>
+          <input class="form-input" id="set-finance-email" placeholder="finance@company.com, billing@company.com" oninput="saveSetting('financeEmail',this.value)">
+          <div style="font-size:11px;color:#aaa;margin-top:4px">Separate multiple emails with commas. Note: Email sending requires backend integration (your dev team wires this to SendGrid/SMTP when deploying).</div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title"><i class="ti ti-sparkles" style="color:#185FA5"></i> AI import (PDF)</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Auto-populate milestones from contract PDF</div><div class="settings-sub">Uses Claude AI to extract milestones, amounts, and dates</div></div>
+          <label class="toggle"><input type="checkbox" id="set-ai" onchange="saveSetting('aiEnabled',this.checked)"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="form-group" style="margin-top:1rem;margin-bottom:0">
+          <label class="form-label">Anthropic API key (for AI import)</label>
+          <input class="form-input" id="set-api-key" type="password" placeholder="sk-ant-..." oninput="saveSetting('apiKey',this.value)">
+          <div style="font-size:11px;color:#aaa;margin-top:4px">Stored locally in your browser. Never sent anywhere except Anthropic's API.</div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title"><i class="ti ti-database" style="color:#185FA5"></i> Data</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Export all data</div><div class="settings-sub">Download contracts and milestones as JSON</div></div>
+          <button class="btn sm" onclick="exportData()"><i class="ti ti-download"></i> Export</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Clear all data</div><div class="settings-sub">Removes all contracts, milestones, and audit log</div></div>
+          <button class="btn sm danger" onclick="clearAllData()"><i class="ti ti-trash"></i> Clear</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONTRACT MODAL -->
+<div class="modal-bg" id="contract-modal" onclick="handleModalBg(event,'contract-modal')">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"><i class="ti ti-file-text" style="color:#185FA5"></i> Add contract</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Client name *</label>
+        <div style="display:flex;gap:6px">
+          <input class="form-input" id="f-client" placeholder="Select or type client name" list="client-datalist" autocomplete="off" style="flex:1">
+          <datalist id="client-datalist"></datalist>
+          <button class="btn sm" type="button" onclick="addNewClient()" title="Add new client"><i class="ti ti-plus"></i> New</button>
+        </div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px">Select existing client or type a new name</div>
+      </div>
+      <div class="form-group"><label class="form-label">Project name *</label><input class="form-input" id="f-project" placeholder="ERP Implementation"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Contract value ($)</label><input class="form-input" id="f-value" type="number" placeholder="50000"></div>
+      <div class="form-group"><label class="form-label">PO number</label><input class="form-input" id="f-po" placeholder="PO-2025-001"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-input" id="f-status"><option value="active">Active</option><option value="completed">Completed</option><option value="paused">Paused</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><input class="form-input" id="f-notes" placeholder="Any notes..."></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Milestones / billing events</label>
+      <div id="ms-recurring-gen-toggle" style="margin-bottom:8px">
+        <button class="btn sm" onclick="toggleRecurringGen()" style="font-size:12px"><i class="ti ti-refresh"></i> Auto-generate recurring milestones</button>
+      </div>
+      <div class="recurring-gen-section" id="recurring-gen-section">
+        <div style="font-size:12px;font-weight:700;color:#185FA5;margin-bottom:8px">Auto-generate recurring billing milestones</div>
+        <div class="form-row-3">
+          <div class="form-group"><label class="form-label">Name prefix</label><input class="form-input sm" id="rg-name" placeholder="Monthly subscription"></div>
+          <div class="form-group"><label class="form-label">Amount ($)</label><input class="form-input sm" id="rg-amount" type="number" placeholder="3000"></div>
+          <div class="form-group"><label class="form-label">Count</label><input class="form-input sm" id="rg-count" type="number" placeholder="12" min="1" max="60"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Start date</label><input class="form-input sm" id="rg-start" type="date"></div>
+          <div class="form-group"><label class="form-label">Frequency</label>
+            <select class="form-input sm" id="rg-freq"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select>
+          </div>
+        </div>
+        <button class="btn sm primary" onclick="generateRecurring()"><i class="ti ti-sparkles"></i> Generate milestones</button>
+      </div>
+      <div class="ms-section">
+        <div class="ms-section-header" style="grid-template-columns:1fr 90px 115px 80px 26px">
+          <span>Name</span><span>Amount ($)</span><span>Due date</span><span>Type</span><span></span>
+        </div>
+        <div id="ms-entries"></div>
+        <button class="ms-add-btn" onclick="addMsEntry()"><i class="ti ti-plus"></i> Add milestone</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('contract-modal')">Cancel</button>
+      <button class="btn primary" onclick="saveContract()"><i class="ti ti-check"></i> Save contract</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEFERRED REASON MODAL -->
+<div class="deferred-modal-bg" id="deferred-modal">
+  <div class="deferred-modal">
+    <div class="modal-title"><i class="ti ti-clock-pause" style="color:#854F0B"></i> Defer milestone</div>
+    <div class="form-group"><label class="form-label">Reason for deferral</label><input class="form-input" id="defer-reason" placeholder="e.g. Client requested delay, scope change..."></div>
+    <div class="form-group"><label class="form-label">New target date (optional)</label><input class="form-input" id="defer-date" type="date"></div>
+    <input type="hidden" id="defer-cid"><input type="hidden" id="defer-mid"><input type="hidden" id="defer-sel-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="cancelDefer()">Cancel</button>
+      <button class="btn primary" onclick="confirmDefer()">Confirm deferral</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICED MODAL -->
+<div class="invoiced-modal-bg" id="invoiced-modal">
+  <div class="deferred-modal">
+    <div class="modal-title"><i class="ti ti-file-invoice" style="color:#0F6E56"></i> Mark as invoiced</div>
+    <div class="form-group"><label class="form-label">Invoice number</label><input class="form-input" id="inv-number" placeholder="INV-2025-001"></div>
+    <div class="form-group"><label class="form-label">Invoice date</label><input class="form-input" id="inv-date" type="date"></div>
+    <input type="hidden" id="inv-cid"><input type="hidden" id="inv-mid"><input type="hidden" id="inv-sel-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="cancelInvoiced()">Cancel</button>
+      <button class="btn success" onclick="confirmInvoiced()"><i class="ti ti-check"></i> Confirm invoiced</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAID MODAL -->
+<div class="paid-modal-bg" id="paid-modal">
+  <div class="deferred-modal">
+    <div class="modal-title"><i class="ti ti-circle-check" style="color:#534AB7"></i> Mark as paid</div>
+    <div class="form-group"><label class="form-label">Payment date</label><input class="form-input" id="paid-date" type="date"></div>
+    <div class="form-group"><label class="form-label">Payment reference (optional)</label><input class="form-input" id="paid-ref" placeholder="Wire transfer ref, check #..."></div>
+    <input type="hidden" id="paid-cid"><input type="hidden" id="paid-mid"><input type="hidden" id="paid-sel-id">
+    <div class="modal-footer">
+      <button class="btn" onclick="cancelPaid()">Cancel</button>
+      <button class="btn primary" style="background:#534AB7;border-color:#534AB7" onclick="confirmPaid()"><i class="ti ti-check"></i> Confirm payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF IMPORT MODAL -->
+<div class="modal-bg" id="pdf-modal" onclick="handleModalBg(event,'pdf-modal')">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-sparkles" style="color:#185FA5"></i> Import contract from PDF</div>
+    <div class="form-group"><label class="form-label">Client name</label><input class="form-input" id="pdf-client" placeholder="Acme Corp"></div>
+    <div class="form-group"><label class="form-label">Upload contract PDF</label>
+      <div class="pdf-drop" id="pdf-drop" onclick="document.getElementById('pdf-file-input').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handlePdfDrop(event)">
+        <i class="ti ti-file-type-pdf"></i>
+        <div id="pdf-drop-label">Click to upload or drag & drop your contract PDF</div>
+        <input type="file" id="pdf-file-input" accept=".pdf" style="display:none" onchange="handlePdfFile(this.files[0])">
+      </div>
+    </div>
+    <div class="ai-results" id="ai-results">
+      <div style="font-weight:700;margin-bottom:6px;color:#185FA5">AI extracted the following milestones:</div>
+      <div id="ai-results-body"></div>
+      <div class="progress-bar" id="ai-progress" style="display:none"><div class="progress-fill" id="ai-progress-fill" style="width:0%"></div></div>
+    </div>
+    <div style="font-size:12px;color:#aaa;margin-top:8px">Requires Anthropic API key in Settings. Claude reads your PDF and extracts milestones, amounts, and dates automatically.</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('pdf-modal')">Cancel</button>
+      <button class="btn primary" id="pdf-import-btn" onclick="runPdfImport()" disabled><i class="ti ti-sparkles"></i> Extract milestones</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY='billtrack_pro_v1';
+const AUDIT_KEY='billtrack_audit_v1';
+const SETTINGS_KEY='billtrack_settings_v1';
+// ── CREDENTIALS — fill in your three values below ──────────────────
+const MSAL_CONFIG = {
+  auth: {
+    clientId: "fee2b468-48ca-42b3-aad0-94a9f24d474c",
+    authority: "https://login.microsoftonline.com/835c8631-c98e-45c3-828d-71faa002b021",
+    redirectUri: window.location.href
+  }
+};
+const msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+const SHAREPOINT_SITE = "shipconsole.sharepoint.com/sites/ProjectBilling";
+const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+// ────────────────────────────────────────────────────────────────────
+
+let contracts=[];
+let auditLog=[];
+let settings={userName:'',userEmail:'',financeEmail:'',notifReady:false,notifDue:false,notifWeekly:false,aiEnabled:false,apiKey:''};
+let editingId=null;
+let tempMilestones=[];
+let pendingStatusChange=null;
+let charts={};
+let pdfFile=null;
+
+async function getToken(){
+  try{
+    await msalInstance.initialize();
+    const accounts=msalInstance.getAllAccounts();
+    const request={scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:accounts[0]};
+    try{const r=await msalInstance.acquireTokenSilent(request);return r.accessToken;}
+    catch{const r=await msalInstance.loginPopup(request);return r.accessToken;}
+  }catch(e){console.error('Auth error:',e);return null;}
+}
+async function signInToMicrosoft(){
+  try{
+    await msalInstance.initialize();
+    const r=await msalInstance.loginPopup({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All']});
+    if(r){updateSignInBtn(true);await loadSharePointData();}
+  }catch(e){alert('Sign in failed: '+e.message);}
+}
+function updateSignInBtn(signedIn){
+  const btn=document.getElementById('signin-btn');
+  if(!btn)return;
+  if(signedIn){
+    btn.innerHTML='<i class="ti ti-check"></i> Connected to Microsoft';
+    btn.style.background='#E1F5EE';btn.style.borderColor='#0F6E56';btn.style.color='#0F6E56';
+  }
+}
+async function loadSharePointData(){
+  try{
+    const token=await getToken();
+    if(!token){console.warn('No token, using local storage');return false;}
+    const headers={Authorization:'Bearer '+token};
+    const siteUrl=SHAREPOINT_SITE.replace('https://','');
+    const parts=siteUrl.split('/sites/');
+    const host=parts[0];const siteName=parts[1];
+    const siteRes=await fetch(`${GRAPH_BASE}/sites/${host}:/sites/${siteName}`,{headers});
+    if(!siteRes.ok){console.error('Site fetch failed:',siteRes.status);return false;}
+    const siteData=await siteRes.json();
+    window._siteId=siteData.id;
+    const [cRes,mRes]=await Promise.all([
+      fetch(`${GRAPH_BASE}/sites/${siteData.id}/lists/Contracts/items?expand=fields&$top=500`,{headers}),
+      fetch(`${GRAPH_BASE}/sites/${siteData.id}/lists/Milestones/items?expand=fields&$top=2000`,{headers})
+    ]);
+    if(!cRes.ok||!mRes.ok){console.error('List fetch failed');return false;}
+    const cData=await cRes.json();
+    const mData=await mRes.json();
+    contracts=cData.value.map(item=>({
+      id:String(item.id),_spId:String(item.id),
+      client:item.fields.Client||'',project:item.fields.Project||'',
+      value:item.fields.ContractValue||0,po:item.fields.PONumber||'',
+      status:item.fields.Status||'active',notes:item.fields.Notes||'',
+      milestones:mData.value.filter(m=>String(m.fields.ContractId)===String(item.id)).map(m=>({
+        id:String(m.id),_spId:String(m.id),
+        name:m.fields.MilestoneName||'',type:m.fields.Type||'one-time',
+        amount:m.fields.Amount||0,
+        dueDate:m.fields.DueDate?m.fields.DueDate.split('T')[0]:'',
+        billingStatus:m.fields.BillingStatus||'pending',
+        invoiceNo:m.fields.InvoiceNo||'',
+        invoiceDate:m.fields.InvoiceDate?m.fields.InvoiceDate.split('T')[0]:'',
+        paymentDate:m.fields.PaymentDate?m.fields.PaymentDate.split('T')[0]:'',
+        paymentRef:m.fields.PaymentRef||'',
+        deferReason:m.fields.DeferReason||'',
+        deferDate:m.fields.DeferDate?m.fields.DeferDate.split('T')[0]:''
+      }))
+    }));
+    updateSignInBtn(true);
+    render();
+    return true;
+  }catch(e){console.error('SharePoint load error:',e);return false;}
+}
+async function saveContractToSP(c){
+  try{
+    const token=await getToken();if(!token)return;
+    const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
+    const siteId=window._siteId;if(!siteId)return;
+    const fields={Client:c.client,Project:c.project,ContractValue:c.value,PONumber:c.po,Status:c.status,Notes:c.notes};
+    if(c._spId){
+      await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Contracts/items/${c._spId}/fields`,{method:'PATCH',headers,body:JSON.stringify(fields)});
+    }else{
+      const res=await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Contracts/items`,{method:'POST',headers,body:JSON.stringify({fields})});
+      const data=await res.json();c._spId=String(data.id);c.id=c._spId;
+    }
+    for(const m of c.milestones)await saveMilestoneToSP(m,c._spId);
+  }catch(e){console.error('Save contract error:',e);}
+}
+async function saveMilestoneToSP(m,contractSpId){
+  try{
+    const token=await getToken();if(!token)return;
+    const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
+    const siteId=window._siteId;if(!siteId)return;
+    const fields={MilestoneName:m.name,ContractId:Number(contractSpId),Type:m.type,Amount:m.amount,
+      DueDate:m.dueDate||null,BillingStatus:m.billingStatus,
+      InvoiceNo:m.invoiceNo||'',InvoiceDate:m.invoiceDate||null,
+      PaymentDate:m.paymentDate||null,PaymentRef:m.paymentRef||'',
+      DeferReason:m.deferReason||'',DeferDate:m.deferDate||null};
+    if(m._spId){
+      await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items/${m._spId}/fields`,{method:'PATCH',headers,body:JSON.stringify(fields)});
+    }else{
+      const res=await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items`,{method:'POST',headers,body:JSON.stringify({fields})});
+      const data=await res.json();m._spId=String(data.id);m.id=m._spId;
+    }
+  }catch(e){console.error('Save milestone error:',e);}
+}
+function loadAll(){
+  try{const a=localStorage.getItem(AUDIT_KEY);if(a)auditLog=JSON.parse(a);}catch(e){}
+  try{const st=localStorage.getItem(SETTINGS_KEY);if(st)Object.assign(settings,JSON.parse(st));}catch(e){}
+  applySettings();
+  // Try silent SharePoint auth first, fall back to sample data
+  (async()=>{
+    try{
+      await msalInstance.initialize();
+      const accounts=msalInstance.getAllAccounts();
+      if(accounts.length>0){
+        const loaded=await loadSharePointData();
+        if(loaded)return;
+      }
+    }catch(e){console.log('Silent auth skipped:',e);}
+    // Fall back to local storage or sample data
+    try{const s=localStorage.getItem(STORAGE_KEY);if(s){contracts=JSON.parse(s);render();return;}}catch(e){}
+    contracts=getSampleData();render();
+  })();
+}
+function saveContracts(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(contracts));}catch(e){}}
+function saveAudit(){try{localStorage.setItem(AUDIT_KEY,JSON.stringify(auditLog));}catch(e){}}
+function saveSetting(k,v){settings[k]=v;try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));}catch(e){}}
+function applySettings(){
+  ['name','email'].forEach(f=>{const el=document.getElementById('set-'+f);if(el)el.value=settings['user'+f.charAt(0).toUpperCase()+f.slice(1)]||'';});
+  document.getElementById('set-finance-email').value=settings.financeEmail||'';
+  document.getElementById('set-notif-ready').checked=settings.notifReady||false;
+  document.getElementById('set-notif-due').checked=settings.notifDue||false;
+  document.getElementById('set-notif-weekly').checked=settings.notifWeekly||false;
+  document.getElementById('set-ai').checked=settings.aiEnabled||false;
+  document.getElementById('set-api-key').value=settings.apiKey||'';
+}
+
+function getSampleData(){
+  const m=d=>{const dt=new Date();dt.setDate(dt.getDate()+d);return dt.toISOString().split('T')[0];};
+  return[
+    {id:'c1',client:'Acme Corp',project:'ERP Implementation',value:120000,po:'PO-2025-001',status:'active',notes:'',milestones:[
+      {id:'m1',name:'Project kickoff',type:'one-time',amount:30000,dueDate:m(-30),billingStatus:'paid',invoiceNo:'INV-001',invoiceDate:m(-28),paymentDate:m(-15),paymentRef:'Wire #1042'},
+      {id:'m2',name:'Phase 1 delivery',type:'one-time',amount:40000,dueDate:m(5),billingStatus:'ready',invoiceNo:'',invoiceDate:'',paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+      {id:'m3',name:'Phase 2 delivery',type:'one-time',amount:30000,dueDate:m(45),billingStatus:'pending',invoiceNo:'',invoiceDate:'',paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+      {id:'m4',name:'Go-live & handover',type:'one-time',amount:20000,dueDate:m(90),billingStatus:'pending',invoiceNo:'',invoiceDate:'',paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+    ]},
+    {id:'c2',client:'Bright Digital',project:'SaaS Platform License',value:36000,po:'PO-2025-002',status:'active',notes:'Annual subscription billed monthly',milestones:[
+      {id:'m5',name:'Monthly sub – Month 1',type:'recurring',amount:3000,dueDate:m(-40),billingStatus:'paid',invoiceNo:'INV-002',invoiceDate:m(-38),paymentDate:m(-25),paymentRef:''},
+      {id:'m6',name:'Monthly sub – Month 2',type:'recurring',amount:3000,dueDate:m(-10),billingStatus:'invoiced',invoiceNo:'INV-005',invoiceDate:m(-8),paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+      {id:'m7',name:'Monthly sub – Month 3',type:'recurring',amount:3000,dueDate:m(20),billingStatus:'ready',invoiceNo:'',invoiceDate:'',paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+      {id:'m8',name:'Monthly sub – Month 4',type:'recurring',amount:3000,dueDate:m(50),billingStatus:'pending',invoiceNo:'',invoiceDate:'',paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+    ]},
+    {id:'c3',client:'NovaTech Inc',project:'Data Migration',value:45000,po:'PO-2025-003',status:'active',notes:'',milestones:[
+      {id:'m9',name:'Discovery & planning',type:'one-time',amount:10000,dueDate:m(-15),billingStatus:'paid',invoiceNo:'INV-003',invoiceDate:m(-13),paymentDate:m(-5),paymentRef:'Check #2201'},
+      {id:'m10',name:'Data mapping complete',type:'one-time',amount:15000,dueDate:m(8),billingStatus:'ready',invoiceNo:'',invoiceDate:'',paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+      {id:'m11',name:'Migration & testing',type:'one-time',amount:20000,dueDate:m(60),billingStatus:'pending',invoiceNo:'',invoiceDate:'',paymentDate:'',paymentRef:'',deferReason:'',deferDate:''},
+    ]},
+  ];
+}
+
+function fmtM(n){return'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function fmtD(d){if(!d)return'—';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function daysUntil(d){const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(d+'T00:00:00')-t)/86400000);}
+function dueBadge(m){
+  if(!m.dueDate||['invoiced','paid'].includes(m.billingStatus))return'';
+  const d=daysUntil(m.dueDate);
+  if(d<0)return`<span class="overdue">${Math.abs(d)}d overdue</span>`;
+  if(d<=14)return`<span class="due-soon">Due in ${d}d</span>`;
+  return'';
+}
+function statusLabel(s){return{pending:'Pending approval',ready:'Ready to invoice',invoiced:'Invoiced',deferred:'Deferred',paid:'Paid'}[s]||s;}
+function nowISO(){return new Date().toISOString();}
+function fmtTS(ts){const d=new Date(ts);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});}
+
+function addAudit(cid,mid,from,to,extra=''){
+  const c=contracts.find(x=>x.id===cid);
+  const m=c?.milestones.find(x=>x.id===mid);
+  auditLog.unshift({id:'a'+Date.now()+Math.random(),ts:nowISO(),user:settings.userName||'You',client:c?.client||'',project:c?.project||'',milestone:m?.name||'',from,to,extra});
+  if(auditLog.length>500)auditLog=auditLog.slice(0,500);
+  saveAudit();
+}
+
+function statusSelect(cid,mid,val){
+  return`<select class="status-sel status-${val}" onchange="handleStatusChange('${cid}','${mid}',this.value,this)">
+    <option value="pending" ${val==='pending'?'selected':''}>Pending approval</option>
+    <option value="ready" ${val==='ready'?'selected':''}>Ready to invoice</option>
+    <option value="invoiced" ${val==='invoiced'?'selected':''}>Invoiced</option>
+    <option value="paid" ${val==='paid'?'selected':''}>Paid</option>
+    <option value="deferred" ${val==='deferred'?'selected':''}>Deferred</option>
+  </select>`;
+}
+
+function handleStatusChange(cid,mid,newVal,sel){
+  const prevVal=sel.className.replace('status-sel status-','').trim();
+  if(newVal==='deferred'){openDeferModal(cid,mid,sel,prevVal);return;}
+  if(newVal==='invoiced'){openInvoicedModal(cid,mid,sel,prevVal);return;}
+  if(newVal==='paid'){openPaidModal(cid,mid,sel,prevVal);return;}
+  applyStatus(cid,mid,newVal,sel,prevVal);
+}
+
+function applyStatus(cid,mid,newVal,sel,prevVal,extra=''){
+  const c=contracts.find(x=>x.id===cid);if(!c)return;
+  const m=c.milestones.find(x=>x.id===mid);if(!m)return;
+  m.billingStatus=newVal;
+  sel.value=newVal;
+  sel.className='status-sel status-'+newVal;
+  addAudit(cid,mid,prevVal,newVal,extra);
+  saveContracts();
+  if(window._siteId){const c2=contracts.find(x=>x.id===cid);const m2=c2?.milestones.find(x=>x.id===mid);if(m2)saveMilestoneToSP(m2,c2._spId);}
+  renderStats();
+  renderBanners();
+  updateNavBadges();
+  if(newVal==='ready'&&settings.notifReady)simulateEmailNotif('finance',c,m);
+}
+
+function openDeferModal(cid,mid,sel,prev){
+  document.getElementById('defer-cid').value=cid;
+  document.getElementById('defer-mid').value=mid;
+  document.getElementById('defer-sel-id').value='';
+  document.getElementById('defer-reason').value='';
+  document.getElementById('defer-date').value='';
+  pendingStatusChange={cid,mid,sel,prev};
+  document.getElementById('deferred-modal').classList.add('open');
+}
+function cancelDefer(){document.getElementById('deferred-modal').classList.remove('open');if(pendingStatusChange){pendingStatusChange.sel.value=pendingStatusChange.prev;pendingStatusChange.sel.className='status-sel status-'+pendingStatusChange.prev;}pendingStatusChange=null;}
+function confirmDefer(){
+  if(!pendingStatusChange)return;
+  const{cid,mid,sel,prev}=pendingStatusChange;
+  const reason=document.getElementById('defer-reason').value.trim();
+  const date=document.getElementById('defer-date').value;
+  const c=contracts.find(x=>x.id===cid);
+  const m=c?.milestones.find(x=>x.id===mid);
+  if(m){m.deferReason=reason;m.deferDate=date;}
+  applyStatus(cid,mid,'deferred',sel,prev,`Reason: ${reason||'not specified'}${date?' | New target: '+fmtD(date):''}`);
+  document.getElementById('deferred-modal').classList.remove('open');
+  pendingStatusChange=null;
+}
+
+function openInvoicedModal(cid,mid,sel,prev){
+  document.getElementById('inv-cid').value=cid;
+  document.getElementById('inv-mid').value=mid;
+  document.getElementById('inv-number').value='';
+  document.getElementById('inv-date').value=new Date().toISOString().split('T')[0];
+  pendingStatusChange={cid,mid,sel,prev};
+  document.getElementById('invoiced-modal').classList.add('open');
+}
+function cancelInvoiced(){document.getElementById('invoiced-modal').classList.remove('open');if(pendingStatusChange){pendingStatusChange.sel.value=pendingStatusChange.prev;pendingStatusChange.sel.className='status-sel status-'+pendingStatusChange.prev;}pendingStatusChange=null;}
+function confirmInvoiced(){
+  if(!pendingStatusChange)return;
+  const{cid,mid,sel,prev}=pendingStatusChange;
+  const invNo=document.getElementById('inv-number').value.trim();
+  const invDate=document.getElementById('inv-date').value;
+  const c=contracts.find(x=>x.id===cid);
+  const m=c?.milestones.find(x=>x.id===mid);
+  if(m){m.invoiceNo=invNo;m.invoiceDate=invDate;}
+  applyStatus(cid,mid,'invoiced',sel,prev,`Invoice: ${invNo||'no number entered'} | Date: ${fmtD(invDate)}`);
+  document.getElementById('invoiced-modal').classList.remove('open');
+  pendingStatusChange=null;
+}
+
+function openPaidModal(cid,mid,sel,prev){
+  document.getElementById('paid-cid').value=cid;
+  document.getElementById('paid-mid').value=mid;
+  document.getElementById('paid-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('paid-ref').value='';
+  pendingStatusChange={cid,mid,sel,prev};
+  document.getElementById('paid-modal').classList.add('open');
+}
+function cancelPaid(){document.getElementById('paid-modal').classList.remove('open');if(pendingStatusChange){pendingStatusChange.sel.value=pendingStatusChange.prev;pendingStatusChange.sel.className='status-sel status-'+pendingStatusChange.prev;}pendingStatusChange=null;}
+function confirmPaid(){
+  if(!pendingStatusChange)return;
+  const{cid,mid,sel,prev}=pendingStatusChange;
+  const payDate=document.getElementById('paid-date').value;
+  const payRef=document.getElementById('paid-ref').value.trim();
+  const c=contracts.find(x=>x.id===cid);
+  const m=c?.milestones.find(x=>x.id===mid);
+  if(m){m.paymentDate=payDate;m.paymentRef=payRef;}
+  applyStatus(cid,mid,'paid',sel,prev,`Payment date: ${fmtD(payDate)}${payRef?' | Ref: '+payRef:''}`);
+  document.getElementById('paid-modal').classList.remove('open');
+  pendingStatusChange=null;
+}
+
+function simulateEmailNotif(type,c,m){
+  const banner=document.createElement('div');
+  banner.className='notify-banner green';
+  banner.style.cssText='position:fixed;bottom:20px;right:20px;z-index:999;max-width:360px;box-shadow:0 4px 20px rgba(0,0,0,.15)';
+  banner.innerHTML=`<i class="ti ti-mail" style="font-size:18px"></i><div><strong>Email notification sent</strong><br><span style="font-size:12px">Finance team notified: ${m.name} (${fmtM(m.amount)}) is ready to invoice for ${c.client}.</span></div>`;
+  document.body.appendChild(banner);
+  setTimeout(()=>banner.remove(),5000);
+}
+
+function renderStats(){
+  const all=contracts.flatMap(c=>c.milestones);
+  const ready=all.filter(m=>m.billingStatus==='ready');
+  const pending=all.filter(m=>m.billingStatus==='pending');
+  const invoiced=all.filter(m=>['invoiced','paid'].includes(m.billingStatus));
+  const paid=all.filter(m=>m.billingStatus==='paid');
+  const overdue=all.filter(m=>!['invoiced','paid'].includes(m.billingStatus)&&m.dueDate&&daysUntil(m.dueDate)<0);
+  const pipeline=all.filter(m=>m.billingStatus==='pending'&&m.dueDate);
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Ready to invoice</div><div class="stat-val blue">${fmtM(ready.reduce((s,m)=>s+Number(m.amount),0))}</div></div>
+    <div class="stat-card"><div class="stat-label">Pending approval</div><div class="stat-val amber">${pending.length} milestone${pending.length!==1?'s':''}</div></div>
+    <div class="stat-card"><div class="stat-label">Invoiced (all time)</div><div class="stat-val green">${fmtM(invoiced.reduce((s,m)=>s+Number(m.amount),0))}</div></div>
+    <div class="stat-card"><div class="stat-label">Collected (paid)</div><div class="stat-val purple">${fmtM(paid.reduce((s,m)=>s+Number(m.amount),0))}</div></div>
+    <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-val ${overdue.length>0?'red':''}">${overdue.length}</div></div>`;
+}
+
+function renderBanners(){
+  const all=contracts.flatMap(c=>c.milestones);
+  const readyAmt=all.filter(m=>m.billingStatus==='ready').reduce((s,m)=>s+Number(m.amount),0);
+  const overdue=all.filter(m=>!['invoiced','paid'].includes(m.billingStatus)&&m.dueDate&&daysUntil(m.dueDate)<0);
+  let html='';
+  if(readyAmt>0)html+=`<div class="notify-banner green"><i class="ti ti-check-circle"></i><div><strong>${fmtM(readyAmt)} ready to invoice</strong> — finance team can proceed. No call needed.</div></div>`;
+  if(overdue.length>0)html+=`<div class="notify-banner red"><i class="ti ti-alert-circle"></i><div><strong>${overdue.length} overdue milestone${overdue.length!==1?'s':''}</strong> — review and update status or defer.</div></div>`;
+  document.getElementById('dashboard-banners').innerHTML=html;
+}
+
+function updateNavBadges(){
+  const all=contracts.flatMap(c=>c.milestones);
+  const ready=all.filter(m=>m.billingStatus==='ready').length;
+  const upcoming=all.filter(m=>!['invoiced','paid'].includes(m.billingStatus)&&m.dueDate&&daysUntil(m.dueDate)>=0&&daysUntil(m.dueDate)<=14).length;
+  const unpaid=all.filter(m=>m.billingStatus==='invoiced').length;
+  const rb=document.getElementById('ready-badge');
+  rb.style.display=ready>0?'':'none';rb.textContent=ready;
+  const ub=document.getElementById('upcoming-badge');
+  ub.style.display=upcoming>0?'':'none';ub.textContent=upcoming;
+  const pb=document.getElementById('paid-badge');
+  pb.style.display=unpaid>0?'':'none';pb.textContent=unpaid;
+}
+
+function contractHTML(c){
+  const total=c.milestones.reduce((s,m)=>s+Number(m.amount),0);
+  const inv=c.milestones.filter(m=>['invoiced','paid'].includes(m.billingStatus)).reduce((s,m)=>s+Number(m.amount),0);
+  const msRows=c.milestones.length===0
+    ?'<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:#aaa;font-size:13px">No milestones yet. Edit contract to add some.</td></tr>'
+    :c.milestones.map(m=>{
+      let extra='';
+      if(m.billingStatus==='deferred'&&m.deferReason)extra=`<div style="font-size:11px;color:#888;margin-top:2px"><i class="ti ti-clock-pause" style="font-size:11px"></i> ${m.deferReason}${m.deferDate?' → '+fmtD(m.deferDate):''}</div>`;
+      if(m.billingStatus==='invoiced'&&m.invoiceNo)extra=`<div style="font-size:11px;color:#0F6E56;margin-top:2px"><i class="ti ti-file-invoice" style="font-size:11px"></i> ${m.invoiceNo} · ${fmtD(m.invoiceDate)}</div>`;
+      if(m.billingStatus==='paid')extra=`<div style="font-size:11px;color:#534AB7;margin-top:2px"><i class="ti ti-coin" style="font-size:11px"></i> Paid ${fmtD(m.paymentDate)}${m.paymentRef?' · '+m.paymentRef:''}</div>`;
+      return`<tr>
+        <td><div class="ms-name">${m.name}${dueBadge(m)}</div>${extra}</td>
+        <td><span class="pill ${m.type}">${m.type==='recurring'?'Recurring':'One-time'}</span></td>
+        <td class="ms-amount">${fmtM(m.amount)}</td>
+        <td style="color:#888">${fmtD(m.dueDate)}</td>
+        <td>${c.po?`<span style="font-size:11px;color:#185FA5">${c.po}</span>`:'<span style="color:#ddd;font-size:11px">—</span>'}</td>
+        <td>${statusSelect(c.id,m.id,m.billingStatus)}</td>
+        <td style="color:#888;font-size:12px">${m.invoiceNo||'—'}</td>
+      </tr>`;}).join('');
+  return`<div class="contract-card">
+    <div class="contract-header">
+      <div style="flex:1;min-width:0">
+        <div class="contract-name">${c.client} <span style="color:#aaa;font-weight:400">—</span> ${c.project} ${c.po?`<span class="badge po">${c.po}</span>`:''}
+        </div>
+        <div class="contract-meta">
+          <span><i class="ti ti-currency-dollar" style="font-size:12px"></i>${fmtM(total)} total</span>
+          <span><i class="ti ti-check" style="font-size:12px"></i>${fmtM(inv)} invoiced</span>
+          <span><i class="ti ti-list" style="font-size:12px"></i>${c.milestones.length} milestone${c.milestones.length!==1?'s':''}</span>
+          ${c.notes?`<span><i class="ti ti-note" style="font-size:12px"></i>${c.notes}</span>`:''}
+        </div>
+      </div>
+      <div class="contract-actions">
+        <span class="badge ${c.status}">${c.status.charAt(0).toUpperCase()+c.status.slice(1)}</span>
+        <button class="action-btn" onclick="editContract('${c.id}')" title="Edit"><i class="ti ti-edit"></i></button>
+        <button class="action-btn" onclick="deleteContract('${c.id}')" title="Delete"><i class="ti ti-trash"></i></button>
+        <button class="action-btn" onclick="toggleContract('body-${c.id}','chev-${c.id}')" title="Expand"><i class="ti ti-chevron-down chevron" id="chev-${c.id}"></i></button>
+      </div>
+    </div>
+    <div id="body-${c.id}" style="display:none">
+      <div class="ms-table-wrap">
+        <table class="ms-table">
+          <thead><tr><th>Milestone</th><th>Type</th><th>Amount</th><th>Due date</th><th>PO #</th><th>Status</th><th>Invoice #</th></tr></thead>
+          <tbody>${msRows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderContractList(id){
+  const el=document.getElementById(id);
+  if(!contracts.length){el.innerHTML='<div class="empty-state"><i class="ti ti-file-off"></i>No contracts yet.<br>Click "Add contract" to get started.</div>';return;}
+  el.innerHTML=contracts.map(contractHTML).join('');
+}
+function toggleContract(bid,cid){const el=document.getElementById(bid),ch=document.getElementById(cid);const o=el.style.display!=='none';el.style.display=o?'none':'block';ch.classList.toggle('open',!o);}
+
+function renderFinance(){
+  const mf=document.getElementById('finance-month-filter').value;
+  const sf=document.getElementById('finance-status-filter').value;
+  const cf=document.getElementById('finance-client-filter').value;
+  let rows=[];
+  contracts.forEach(c=>c.milestones.forEach(m=>{
+    const mo=m.dueDate?m.dueDate.slice(0,7):'';
+    if(mf!=='all'&&mo!==mf)return;
+    if(sf!=='all'&&m.billingStatus!==sf)return;
+    if(cf!=='all'&&c.client!==cf)return;
+    rows.push({c,m});
+  }));
+  rows.sort((a,b)=>(a.m.dueDate||'').localeCompare(b.m.dueDate||''));
+  const readyAmt=rows.filter(r=>r.m.billingStatus==='ready').reduce((s,r)=>s+Number(r.m.amount),0);
+  const statusColor={pending:'status-pending',ready:'status-ready',invoiced:'status-invoiced',deferred:'status-deferred',paid:'status-paid'};
+  const tableRows=rows.map(({c,m})=>`<tr>
+    <td><strong>${c.client}</strong></td>
+    <td>${c.project}</td>
+    <td>${m.name}${dueBadge(m)}</td>
+    <td><span class="pill ${m.type}">${m.type==='recurring'?'Recurring':'One-time'}</span></td>
+    <td style="color:#185FA5;font-size:12px">${c.po||'—'}</td>
+    <td>${fmtD(m.dueDate)}</td>
+    <td class="ms-amount">${fmtM(m.amount)}</td>
+    <td style="font-size:12px;color:#0F6E56">${m.invoiceNo||'—'}</td>
+    <td style="font-size:12px;color:#534AB7">${m.paymentDate?fmtD(m.paymentDate):'—'}</td>
+    <td><select class="status-sel ${statusColor[m.billingStatus]}" onchange="handleStatusChange('${c.id}','${m.id}',this.value,this);setTimeout(renderFinance,100)">
+      <option value="pending" ${m.billingStatus==='pending'?'selected':''}>Pending approval</option>
+      <option value="ready" ${m.billingStatus==='ready'?'selected':''}>Ready to invoice</option>
+      <option value="invoiced" ${m.billingStatus==='invoiced'?'selected':''}>Invoiced</option>
+      <option value="paid" ${m.billingStatus==='paid'?'selected':''}>Paid</option>
+      <option value="deferred" ${m.billingStatus==='deferred'?'selected':''}>Deferred</option>
+    </select></td>
+  </tr>`).join('');
+  document.getElementById('finance-content').innerHTML=`
+    ${readyAmt>0?`<div class="notify-banner green"><i class="ti ti-check-circle" style="font-size:18px"></i><div><strong>${fmtM(readyAmt)} ready to invoice</strong> — approved. Proceed without calling for approval.</div></div>`:''}
+    ${!rows.length?'<div class="empty-state"><i class="ti ti-filter-off"></i>No milestones match this filter.</div>':`
+    <table class="finance-table">
+      <thead><tr><th>Client</th><th>Project</th><th>Milestone</th><th>Type</th><th>PO #</th><th>Due date</th><th>Amount</th><th>Invoice #</th><th>Payment date</th><th>Status</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+      <tfoot><tr class="total-row"><td colspan="6" style="text-align:right;font-size:12px;color:#999">Total shown</td><td class="ms-amount">${fmtM(rows.reduce((s,r)=>s+Number(r.m.amount),0))}</td><td colspan="3"></td></tr></tfoot>
+    </table>`}`;
+}
+
+function renderUpcoming(){
+  let rows=[];
+  contracts.forEach(c=>c.milestones.forEach(m=>{
+    if(!m.dueDate||['invoiced','paid'].includes(m.billingStatus))return;
+    const d=daysUntil(m.dueDate);
+    if(d>60)return;
+    rows.push({c,m,d});
+  }));
+  rows.sort((a,b)=>a.d-b.d);
+  function section(title,items,color){
+    if(!items.length)return'';
+    return`<div class="section-title" style="color:${color}">${title}</div>
+    <table class="finance-table" style="margin-bottom:1.5rem">
+      <thead><tr><th>Client</th><th>Project</th><th>Milestone</th><th>PO #</th><th>Amount</th><th>Due date</th><th>Status</th></tr></thead>
+      <tbody>${items.map(({c,m})=>`<tr>
+        <td><strong>${c.client}</strong></td><td>${c.project}</td><td>${m.name}${dueBadge(m)}</td>
+        <td style="color:#185FA5;font-size:12px">${c.po||'—'}</td>
+        <td class="ms-amount">${fmtM(m.amount)}</td><td>${fmtD(m.dueDate)}</td>
+        <td><select class="status-sel status-${m.billingStatus}" onchange="handleStatusChange('${c.id}','${m.id}',this.value,this);setTimeout(renderUpcoming,100)">
+          <option value="pending" ${m.billingStatus==='pending'?'selected':''}>Pending approval</option>
+          <option value="ready" ${m.billingStatus==='ready'?'selected':''}>Ready to invoice</option>
+          <option value="invoiced" ${m.billingStatus==='invoiced'?'selected':''}>Invoiced</option>
+          <option value="paid" ${m.billingStatus==='paid'?'selected':''}>Paid</option>
+          <option value="deferred" ${m.billingStatus==='deferred'?'selected':''}>Deferred</option>
+        </select></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+  const content=section('Overdue',rows.filter(r=>r.d<0),'#A32D2D')+section('Due this week',rows.filter(r=>r.d>=0&&r.d<=7),'#854F0B')+section('Due this month (8–30 days)',rows.filter(r=>r.d>7&&r.d<=30),'#185FA5')+section('Next 30–60 days',rows.filter(r=>r.d>30&&r.d<=60),'#888');
+  document.getElementById('upcoming-content').innerHTML=content||'<div class="empty-state"><i class="ti ti-calendar-check"></i>Nothing due in the next 60 days.</div>';
+}
+
+function renderAudit(){
+  if(!auditLog.length){document.getElementById('audit-content').innerHTML='<div class="empty-state"><i class="ti ti-history"></i>No activity yet. Status changes will appear here.</div>';return;}
+  document.getElementById('audit-content').innerHTML=`<div style="background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1rem 1.25rem">
+    ${auditLog.map(a=>`<div class="audit-row">
+      <div class="audit-dot ${a.to}"></div>
+      <div style="flex:1"><strong>${a.client} — ${a.milestone}</strong><br><span style="color:#888;font-size:12px">${statusLabel(a.from)} → <strong style="color:#1a1a1a">${statusLabel(a.to)}</strong>${a.extra?' · '+a.extra:''}</span></div>
+      <div class="audit-time">${fmtTS(a.ts)}<br><span style="color:#bbb">${a.user}</span></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function clearAudit(){if(!confirm('Clear the entire audit log?'))return;auditLog=[];saveAudit();renderAudit();}
+
+function renderPayments(){
+  const invoiced=[];
+  contracts.forEach(c=>c.milestones.forEach(m=>{
+    if(['invoiced','paid'].includes(m.billingStatus))invoiced.push({c,m});
+  }));
+  invoiced.sort((a,b)=>(b.m.invoiceDate||'').localeCompare(a.m.invoiceDate||''));
+  const totalInv=invoiced.reduce((s,r)=>s+Number(r.m.amount),0);
+  const totalPaid=invoiced.filter(r=>r.m.billingStatus==='paid').reduce((s,r)=>s+Number(r.m.amount),0);
+  const outstanding=totalInv-totalPaid;
+  document.getElementById('payments-content').innerHTML=`
+    <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.5rem">
+      <div class="stat-card"><div class="stat-label">Total invoiced</div><div class="stat-val blue">${fmtM(totalInv)}</div></div>
+      <div class="stat-card"><div class="stat-label">Collected</div><div class="stat-val green">${fmtM(totalPaid)}</div></div>
+      <div class="stat-card"><div class="stat-label">Outstanding</div><div class="stat-val ${outstanding>0?'amber':''}">${fmtM(outstanding)}</div></div>
+    </div>
+    ${!invoiced.length?'<div class="empty-state"><i class="ti ti-coin"></i>No invoiced milestones yet.</div>':`
+    <table class="finance-table">
+      <thead><tr><th>Client</th><th>Milestone</th><th>PO #</th><th>Invoice #</th><th>Invoice date</th><th>Amount</th><th>Payment date</th><th>Ref</th><th>Status</th></tr></thead>
+      <tbody>${invoiced.map(({c,m})=>`<tr>
+        <td><strong>${c.client}</strong><br><span style="font-size:11px;color:#888">${c.project}</span></td>
+        <td>${m.name}</td>
+        <td style="font-size:12px;color:#185FA5">${c.po||'—'}</td>
+        <td style="font-size:12px;color:#0F6E56">${m.invoiceNo||'—'}</td>
+        <td style="font-size:12px">${fmtD(m.invoiceDate)}</td>
+        <td class="ms-amount">${fmtM(m.amount)}</td>
+        <td style="font-size:12px;color:${m.paymentDate?'#534AB7':'#A32D2D'}">${m.paymentDate?fmtD(m.paymentDate):'Awaiting payment'}</td>
+        <td style="font-size:12px;color:#888">${m.paymentRef||'—'}</td>
+        <td><span class="badge ${m.billingStatus==='paid'?'active':'paused'}">${m.billingStatus==='paid'?'Paid':'Invoiced'}</span></td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr class="total-row"><td colspan="5" style="text-align:right;font-size:12px;color:#999">Total</td><td class="ms-amount">${fmtM(totalInv)}</td><td colspan="3"></td></tr></tfoot>
+    </table>`}`;
+}
+
+function populateFilters(){
+  const months=new Set(),clients=new Set();
+  contracts.forEach(c=>{clients.add(c.client);c.milestones.forEach(m=>{if(m.dueDate)months.add(m.dueDate.slice(0,7));});});
+  const msel=document.getElementById('finance-month-filter');
+  const existingM=[...msel.options].map(o=>o.value);
+  [...months].sort().forEach(mo=>{
+    if(existingM.includes(mo))return;
+    const o=document.createElement('option');o.value=mo;
+    const[y,mn]=mo.split('-');o.text=new Date(+y,+mn-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    msel.appendChild(o);
+  });
+  const csel=document.getElementById('finance-client-filter');
+  const existingC=[...csel.options].map(o=>o.value);
+  [...clients].sort().forEach(cl=>{
+    if(existingC.includes(cl))return;
+    const o=document.createElement('option');o.value=cl;o.text=cl;csel.appendChild(o);
+  });
+}
+
+function renderAnalytics(){
+  const all=contracts.flatMap(c=>({...c.milestones,client:c.client}));
+  // Monthly invoiced
+  const monthlyMap={};
+  contracts.forEach(c=>c.milestones.forEach(m=>{
+    if(!['invoiced','paid'].includes(m.billingStatus)||!m.invoiceDate)return;
+    const k=m.invoiceDate.slice(0,7);
+    monthlyMap[k]=(monthlyMap[k]||0)+Number(m.amount);
+  }));
+  const months=Object.keys(monthlyMap).sort();
+  // Pipeline
+  const today=new Date();
+  const pipeMap={};
+  for(let i=0;i<6;i++){const d=new Date(today);d.setMonth(d.getMonth()+i);pipeMap[d.toISOString().slice(0,7)]=0;}
+  contracts.forEach(c=>c.milestones.forEach(m=>{
+    if(!m.dueDate||['invoiced','paid'].includes(m.billingStatus))return;
+    const k=m.dueDate.slice(0,7);
+    if(pipeMap.hasOwnProperty(k))pipeMap[k]+=Number(m.amount);
+  }));
+  // Status breakdown
+  const statusCount={pending:0,ready:0,invoiced:0,paid:0,deferred:0};
+  contracts.forEach(c=>c.milestones.forEach(m=>{statusCount[m.billingStatus]=(statusCount[m.billingStatus]||0)+1;}));
+  // Client revenue
+  const clientMap={};
+  contracts.forEach(c=>c.milestones.forEach(m=>{
+    if(['invoiced','paid'].includes(m.billingStatus))clientMap[c.client]=(clientMap[c.client]||0)+Number(m.amount);
+  }));
+
+  function mkChart(id,type,labels,datasets,opts={}){
+    const canvas=document.getElementById(id);
+    if(charts[id])charts[id].destroy();
+    charts[id]=new Chart(canvas,{type,data:{labels,datasets},options:{responsive:true,plugins:{legend:{display:type==='doughnut'||type==='pie',position:'right'}},scales:type!=='doughnut'&&type!=='pie'?{y:{beginAtZero:true,ticks:{callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v}}}:undefined,...opts}});
+  }
+  mkChart('chart-monthly','bar',months.map(m=>{const[y,mn]=m.split('-');return new Date(+y,+mn-1,1).toLocaleDateString('en-US',{month:'short',year:'2-digit'});}),
+    [{label:'Invoiced',data:months.map(m=>monthlyMap[m]),backgroundColor:'#185FA5',borderRadius:4}]);
+  mkChart('chart-pipeline','bar',Object.keys(pipeMap).map(m=>{const[y,mn]=m.split('-');return new Date(+y,+mn-1,1).toLocaleDateString('en-US',{month:'short',year:'2-digit'});}),
+    [{label:'Pipeline',data:Object.values(pipeMap),backgroundColor:'#9FE1CB',borderRadius:4}]);
+  mkChart('chart-status','doughnut',Object.keys(statusCount).map(statusLabel),
+    [{data:Object.values(statusCount),backgroundColor:['#FAEEDA','#EBF3FB','#E1F5EE','#EEEDFE','#f0f0ee'],borderWidth:1}]);
+  mkChart('chart-client','bar',Object.keys(clientMap),
+    [{label:'Invoiced',data:Object.values(clientMap),backgroundColor:'#5DCAA5',borderRadius:4}]);
+}
+
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('nav-'+v).classList.add('active');
+  if(v==='finance'){populateFilters();renderFinance();}
+  if(v==='upcoming')renderUpcoming();
+  if(v==='audit')renderAudit();
+  if(v==='payments')renderPayments();
+  if(v==='analytics')renderAnalytics();
+}
+
+function render(){
+  renderStats();
+  renderBanners();
+  renderContractList('dashboard-contracts');
+  renderContractList('all-contracts');
+  populateFilters();
+  updateNavBadges();
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+
+// CONTRACT MODAL
+function getClientList(){
+  const seen=new Set();
+  contracts.forEach(c=>{if(c.client)seen.add(c.client);});
+  return [...seen].sort();
+}
+function populateClientDatalist(){
+  const dl=document.getElementById('client-datalist');
+  if(!dl)return;
+  dl.innerHTML=getClientList().map(c=>`<option value="${c}">`).join('');
+}
+function addNewClient(){
+  const name=prompt('Enter new client name:');
+  if(!name||!name.trim())return;
+  document.getElementById('f-client').value=name.trim();
+  populateClientDatalist();
+}
+function openAddContract(){
+  editingId=null;
+  document.getElementById('modal-title').innerHTML='<i class="ti ti-file-text" style="color:#185FA5"></i> Add contract';
+  ['f-client','f-project','f-notes','f-po'].forEach(id=>document.getElementById(id).value='');
+  populateClientDatalist();
+  document.getElementById('f-value').value='';
+  document.getElementById('f-status').value='active';
+  document.getElementById('recurring-gen-section').classList.remove('show');
+  tempMilestones=[{id:'tm'+Date.now(),name:'',type:'one-time',amount:'',dueDate:'',billingStatus:'pending'}];
+  renderMsEntries();
+  document.getElementById('contract-modal').classList.add('open');
+}
+function editContract(id){
+  const c=contracts.find(x=>x.id===id);if(!c)return;
+  editingId=id;
+  document.getElementById('modal-title').innerHTML='<i class="ti ti-edit" style="color:#185FA5"></i> Edit contract';
+  populateClientDatalist();
+  document.getElementById('f-client').value=c.client;
+  document.getElementById('f-project').value=c.project;
+  document.getElementById('f-value').value=c.value;
+  document.getElementById('f-po').value=c.po||'';
+  document.getElementById('f-status').value=c.status;
+  document.getElementById('f-notes').value=c.notes||'';
+  document.getElementById('recurring-gen-section').classList.remove('show');
+  tempMilestones=c.milestones.map(m=>({...m}));
+  renderMsEntries();
+  document.getElementById('contract-modal').classList.add('open');
+}
+function deleteContract(id){if(!confirm('Delete this contract and all milestones?'))return;contracts=contracts.filter(c=>c.id!==id);saveContracts();render();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function handleModalBg(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+
+function renderMsEntries(){
+  document.getElementById('ms-entries').innerHTML=tempMilestones.map((m,i)=>`
+    <div class="ms-entry">
+      <div class="ms-entry-top">
+        <input class="form-input sm" placeholder="Milestone name" value="${m.name||''}" oninput="tempMilestones[${i}].name=this.value">
+        <input class="form-input sm" type="number" placeholder="0" value="${m.amount||''}" oninput="tempMilestones[${i}].amount=this.value">
+        <input class="form-input sm" type="date" value="${m.dueDate||''}" oninput="tempMilestones[${i}].dueDate=this.value">
+        <select class="form-input sm" onchange="tempMilestones[${i}].type=this.value">
+          <option value="one-time" ${m.type!=='recurring'?'selected':''}>One-time</option>
+          <option value="recurring" ${m.type==='recurring'?'selected':''}>Recurring</option>
+        </select>
+        <button class="del-btn" onclick="removeMsEntry(${i})" title="Remove"><i class="ti ti-x"></i></button>
+      </div>
+    </div>`).join('');
+}
+function addMsEntry(){tempMilestones.push({id:'tm'+Date.now(),name:'',type:'one-time',amount:'',dueDate:'',billingStatus:'pending'});renderMsEntries();}
+function removeMsEntry(i){tempMilestones.splice(i,1);renderMsEntries();}
+
+function toggleRecurringGen(){document.getElementById('recurring-gen-section').classList.toggle('show');}
+function generateRecurring(){
+  const name=document.getElementById('rg-name').value.trim()||'Milestone';
+  const amount=Number(document.getElementById('rg-amount').value)||0;
+  const count=Math.min(Number(document.getElementById('rg-count').value)||12,60);
+  const start=document.getElementById('rg-start').value;
+  const freq=document.getElementById('rg-freq').value;
+  if(!start){alert('Please enter a start date.');return;}
+  const dt=new Date(start+'T00:00:00');
+  for(let i=0;i<count;i++){
+    const d=new Date(dt);
+    if(freq==='monthly')d.setMonth(d.getMonth()+i);
+    else if(freq==='quarterly')d.setMonth(d.getMonth()+i*3);
+    else d.setFullYear(d.getFullYear()+i);
+    const label=freq==='monthly'?`Month ${i+1}`:freq==='quarterly'?`Q${i+1}`:`Year ${i+1}`;
+    tempMilestones.push({id:'tm'+Date.now()+i,name:`${name} – ${label}`,type:'recurring',amount,dueDate:d.toISOString().split('T')[0],billingStatus:'pending'});
+  }
+  renderMsEntries();
+  document.getElementById('recurring-gen-section').classList.remove('show');
+}
+
+function saveContract(){
+  const client=document.getElementById('f-client').value.trim();
+  const project=document.getElementById('f-project').value.trim();
+  if(!client||!project){alert('Client name and project name are required.');return;}
+  const milestones=tempMilestones.map(m=>({
+    id:m.id||('m'+Date.now()+Math.random()),
+    name:m.name||'Untitled milestone',type:m.type||'one-time',
+    amount:Number(m.amount)||0,dueDate:m.dueDate||'',
+    billingStatus:m.billingStatus||'pending',
+    invoiceNo:m.invoiceNo||'',invoiceDate:m.invoiceDate||'',
+    paymentDate:m.paymentDate||'',paymentRef:m.paymentRef||'',
+    deferReason:m.deferReason||'',deferDate:m.deferDate||''
+  }));
+  const data={client,project,value:Number(document.getElementById('f-value').value)||0,po:document.getElementById('f-po').value.trim(),status:document.getElementById('f-status').value,notes:document.getElementById('f-notes').value.trim(),milestones};
+  if(editingId){const idx=contracts.findIndex(c=>c.id===editingId);contracts[idx]={...contracts[idx],...data};}
+  else contracts.push({id:'c'+Date.now(),...data});
+  saveContracts();
+  const savedC=editingId?contracts.find(c=>c.id===editingId):contracts[contracts.length-1];
+  if(window._siteId&&savedC)saveContractToSP(savedC);
+  closeModal('contract-modal');render();
+}
+
+// PDF IMPORT
+let pdfFileData=null;
+function openPdfImport(){document.getElementById('pdf-modal').classList.add('open');document.getElementById('ai-results').classList.remove('show');document.getElementById('pdf-drop-label').textContent='Click to upload or drag & drop your contract PDF';document.getElementById('pdf-import-btn').disabled=true;pdfFileData=null;}
+function handlePdfDrop(e){e.preventDefault();document.getElementById('pdf-drop').classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')handlePdfFile(f);}
+function handlePdfFile(f){
+  if(!f)return;pdfFileData=f;
+  document.getElementById('pdf-drop-label').textContent=`✓ ${f.name} selected`;
+  document.getElementById('pdf-import-btn').disabled=false;
+}
+async function runPdfImport(){
+  const apiKey=settings.apiKey;
+  if(!apiKey){alert('Please add your Anthropic API key in Settings first.');return;}
+  if(!pdfFileData){alert('Please upload a PDF first.');return;}
+  const client=document.getElementById('pdf-client').value.trim();
+  document.getElementById('pdf-import-btn').disabled=true;
+  document.getElementById('pdf-import-btn').innerHTML='<i class="ti ti-loader"></i> Extracting...';
+  const ar=document.getElementById('ai-results');ar.classList.add('show');
+  document.getElementById('ai-results-body').innerHTML='Reading PDF with AI...';
+  try{
+    const reader=new FileReader();
+    reader.onload=async(e)=>{
+      const b64=e.target.result.split(',')[1];
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,
+          messages:[{role:'user',content:[
+            {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+            {type:'text',text:`Extract all billing milestones, payment schedules, and deliverables from this contract. Return ONLY a JSON array, no other text. Each item: {"name":"string","amount":number,"dueDate":"YYYY-MM-DD or empty string","type":"one-time or recurring"}. If dates are relative (e.g. "30 days after signing"), estimate from today. Extract as many milestones as exist in the document.`}
+          ]}]})});
+      const data=await res.json();
+      const text=data.content[0].text;
+      let parsed=[];
+      try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(e){document.getElementById('ai-results-body').innerHTML='<span style="color:#A32D2D">Could not parse AI response. Try again or add milestones manually.</span>';document.getElementById('pdf-import-btn').disabled=false;document.getElementById('pdf-import-btn').innerHTML='<i class="ti ti-sparkles"></i> Extract milestones';return;}
+      document.getElementById('ai-results-body').innerHTML=`<div style="color:#0F6E56;margin-bottom:8px">✓ Found ${parsed.length} milestone${parsed.length!==1?'s':''}. Review below then save the contract.</div>`;
+      tempMilestones=parsed.map((m,i)=>({id:'tm'+Date.now()+i,name:m.name||'Milestone',type:m.type||'one-time',amount:Number(m.amount)||0,dueDate:m.dueDate||'',billingStatus:'pending'}));
+      if(client){document.getElementById('f-client').value=client;document.getElementById('f-project').value='Imported contract';}
+      closeModal('pdf-modal');openAddContract();
+      if(client)document.getElementById('f-client').value=client;
+      document.getElementById('f-project').value='Imported contract';
+      renderMsEntries();
+    };
+    reader.readAsDataURL(pdfFileData);
+  }catch(err){
+    document.getElementById('ai-results-body').innerHTML='<span style="color:#A32D2D">Error: '+err.message+'</span>';
+    document.getElementById('pdf-import-btn').disabled=false;
+    document.getElementById('pdf-import-btn').innerHTML='<i class="ti ti-sparkles"></i> Extract milestones';
+  }
+}
+
+function exportData(){
+  const data={exportDate:new Date().toISOString(),contracts,auditLog};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='billtrack-export-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function clearAllData(){if(!confirm('Clear ALL data? This cannot be undone.'))return;contracts=[];auditLog=[];saveContracts();saveAudit();render();}
+
+loadAll();
+</script>
+</body>
+</html>
