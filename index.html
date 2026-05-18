@@ -482,17 +482,27 @@ let pdfFile=null;
 
 async function getToken(){
   try{
-    await msalInstance.initialize();
-    const accounts=msalInstance.getAllAccounts();
+    const instance=window._msalInstance||msalInstance;
+    await instance.initialize();
+    const accounts=instance.getAllAccounts();
     const request={scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:accounts[0]};
-    try{const r=await msalInstance.acquireTokenSilent(request);return r.accessToken;}
-    catch{const r=await msalInstance.loginPopup(request);return r.accessToken;}
+    try{const r=await instance.acquireTokenSilent(request);return r.accessToken;}
+    catch{const r=await instance.loginPopup(request);return r.accessToken;}
   }catch(e){console.error('Auth error:',e);return null;}
 }
 async function signInToMicrosoft(){
   try{
-    await msalInstance.initialize();
-    const r=await msalInstance.loginPopup({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All']});
+    const msalConfig={
+      auth:{
+        clientId:MSAL_CONFIG.auth.clientId,
+        authority:MSAL_CONFIG.auth.authority,
+        redirectUri:MSAL_CONFIG.auth.redirectUri
+      }
+    };
+    const freshInstance=new msal.PublicClientApplication(msalConfig);
+    await freshInstance.initialize();
+    window._msalInstance=freshInstance;
+    const r=await freshInstance.loginPopup({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All']});
     if(r){updateSignInBtn(true);await loadSharePointData();}
   }catch(e){alert('Sign in failed: '+e.message);}
 }
@@ -587,8 +597,9 @@ function loadAll(){
   // Try silent SharePoint auth first, fall back to sample data
   (async()=>{
     try{
-      await msalInstance.initialize();
-      const accounts=msalInstance.getAllAccounts();
+      const instance=window._msalInstance||msalInstance;
+      await instance.initialize();
+      const accounts=instance.getAllAccounts();
       if(accounts.length>0){
         const loaded=await loadSharePointData();
         if(loaded)return;
