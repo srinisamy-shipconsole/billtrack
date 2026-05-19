@@ -195,7 +195,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
         <div class="btn-row">
           <button class="btn" onclick="showView('contracts');openAddContract()"><i class="ti ti-file-plus"></i> New contract</button>
           <button class="btn primary" onclick="openPdfImport()"><i class="ti ti-sparkles"></i> Import from PDF</button>
-          <button class="btn" id="signin-btn" onclick="signInToMicrosoft()" style="border-color:#185FA5;color:#185FA5"><i class="ti ti-brand-windows"></i> Sign in to Microsoft</button>
+          <button class="btn" id="signin-btn" style="border-color:#185FA5;color:#185FA5"><i class="ti ti-brand-windows"></i> Sign in to Microsoft</button>
         </div>
       </div>
       <div class="stats-row" id="stats-row"></div>
@@ -607,7 +607,7 @@ async function loadSharePointData(){
       status:item.fields.Status||'active',notes:item.fields.Notes||'',
       milestones:mData.value.filter(m=>String(m.fields.ContractId)===String(item.id)).map(m=>({
         id:String(m.id),_spId:String(m.id),
-        name:m.fields.MilestoneName||'',type:m.fields.Type||'one-time',
+        name:m.fields.MilestoneName||'',type:m.fields.MilestoneType||'one-time',
         amount:m.fields.Amount||0,
         dueDate:m.fields.DueDate?m.fields.DueDate.split('T')[0]:'',
         billingStatus:m.fields.BillingStatus||'pending',
@@ -644,7 +644,7 @@ async function saveMilestoneToSP(m,contractSpId){
     const token=await getToken();if(!token)return;
     const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
     const siteId=window._siteId;if(!siteId)return;
-    const fields={MilestoneName:m.name,ContractId:Number(contractSpId),Type:m.type,Amount:m.amount,
+    const fields={MilestoneName:m.name,ContractId:Number(contractSpId),MilestoneType:m.type,Amount:m.amount,
       DueDate:m.dueDate||null,BillingStatus:m.billingStatus,
       InvoiceNo:m.invoiceNo||'',InvoiceDate:m.invoiceDate||null,
       PaymentDate:m.paymentDate||null,PaymentRef:m.paymentRef||'',
@@ -1308,7 +1308,22 @@ function exportData(){
 }
 function clearAllData(){if(!confirm('Clear ALL data? This cannot be undone.'))return;contracts=[];auditLog=[];saveContracts();saveAudit();render();}
 
+// Wire up sign in button via addEventListener (more reliable than inline onclick)
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('signin-btn');
+  if (btn) {
+    btn.addEventListener('click', function() {
+      console.log('Sign in button clicked');
+      signInToMicrosoft();
+    });
+    console.log('Sign in button wired up successfully');
+  } else {
+    console.error('Sign in button not found in DOM');
+  }
+});
+
 loadAll();
+console.log('BillTrack Pro loaded successfully');
 </script>
 </body>
 </html>
