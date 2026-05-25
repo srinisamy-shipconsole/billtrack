@@ -299,6 +299,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
         </div>
       </div>
       <div class="settings-section">
+        <div class="settings-title"><i class="ti ti-receipt" style="color:#185FA5"></i> Billing</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Payment terms (days)</div><div class="settings-sub">Used to calculate payment due date from invoice date (e.g. Net 45)</div></div>
+          <input class="form-input" id="set-payment-terms" type="number" min="1" max="365" placeholder="45" style="width:80px;text-align:center" oninput="saveSetting('paymentTerms',Number(this.value)||45)">
+        </div>
+      </div>
+      <div class="settings-section">
         <div class="settings-title"><i class="ti ti-sparkles" style="color:#185FA5"></i> AI import (PDF)</div>
         <div class="settings-row">
           <div><div class="settings-label">Auto-populate milestones from contract PDF</div><div class="settings-sub">Uses Claude AI to extract milestones, amounts, and dates</div></div>
@@ -374,7 +381,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1
       </div>
       <div class="ms-section">
         <div class="ms-section-header" style="grid-template-columns:1fr 90px 115px 80px 26px">
-          <span>Name</span><span>Amount ($)</span><span>Due date</span><span>Type</span><span></span>
+          <span>Name</span><span>Amount ($)</span><span>Milestone date</span><span>Type</span><span></span>
         </div>
         <div id="ms-entries"></div>
         <button class="ms-add-btn" onclick="addMsEntry()"><i class="ti ti-plus"></i> Add milestone</button>
@@ -519,7 +526,7 @@ async function getMsalInstance() {
 
 let contracts=[];
 let auditLog=[];
-let settings={userName:'',userEmail:'',financeEmail:'',notifReady:false,notifDue:false,notifWeekly:false,aiEnabled:false,apiKey:''};
+let settings={userName:'',userEmail:'',financeEmail:'',notifReady:false,notifDue:false,notifWeekly:false,aiEnabled:false,apiKey:'',paymentTerms:45};
 let editingId=null;
 let tempMilestones=[];
 let pendingStatusChange=null;
@@ -616,7 +623,8 @@ async function loadSharePointData(){
         paymentDate:m.fields.PaymentDate?m.fields.PaymentDate.split('T')[0]:'',
         paymentRef:m.fields.PaymentRef||'',
         deferReason:m.fields.DeferReason||'',
-        deferDate:m.fields.DeferDate?m.fields.DeferDate.split('T')[0]:''
+        deferDate:m.fields.DeferDate?m.fields.DeferDate.split('T')[0]:'',
+        paymentDueDate:m.fields.PaymentDueDate?m.fields.PaymentDueDate.split('T')[0]:''
       }))
     }));
     updateSignInBtn(true);
@@ -649,7 +657,8 @@ async function saveMilestoneToSP(m,contractSpId){
       DueDate:m.dueDate||null,BillingStatus:m.billingStatus,
       InvoiceNo:m.invoiceNo||'',InvoiceDate:m.invoiceDate||null,
       PaymentDate:m.paymentDate||null,PaymentRef:m.paymentRef||'',
-      DeferReason:m.deferReason||'',DeferDate:m.deferDate||null};
+      DeferReason:m.deferReason||'',DeferDate:m.deferDate||null,
+      PaymentDueDate:m.paymentDueDate||null};
     const spId=m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null);
     if(spId){
       await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items/${spId}/fields`,{method:'PATCH',headers,body:JSON.stringify(fields)});
@@ -690,6 +699,7 @@ function applySettings(){
   document.getElementById('set-notif-weekly').checked=settings.notifWeekly||false;
   document.getElementById('set-ai').checked=settings.aiEnabled||false;
   document.getElementById('set-api-key').value=settings.apiKey||'';
+  document.getElementById('set-payment-terms').value=settings.paymentTerms||45;
 }
 
 function getSampleData(){
@@ -809,7 +819,13 @@ function confirmInvoiced(){
   const invDate=document.getElementById('inv-date').value;
   const c=contracts.find(x=>x.id===cid);
   const m=c?.milestones.find(x=>x.id===mid);
-  if(m){m.invoiceNo=invNo;m.invoiceDate=invDate;}
+  if(m){
+    m.invoiceNo=invNo;m.invoiceDate=invDate;
+    const terms=Number(settings.paymentTerms)||45;
+    const invDt=new Date(invDate+'T00:00:00');
+    invDt.setDate(invDt.getDate()+terms);
+    m.paymentDueDate=invDt.toISOString().split('T')[0];
+  }
   applyStatus(cid,mid,'invoiced',sel,prev,`Invoice: ${invNo||'no number entered'} | Date: ${fmtD(invDate)}`);
   document.getElementById('invoiced-modal').classList.remove('open');
   pendingStatusChange=null;
@@ -926,7 +942,7 @@ function contractHTML(c,prefix=''){
     <div id="${prefix}body-${c.id}" style="display:none">
       <div class="ms-table-wrap">
         <table class="ms-table">
-          <thead><tr><th>Milestone</th><th>Type</th><th>Amount</th><th>Due date</th><th>PO #</th><th>Status</th><th>Invoice #</th></tr></thead>
+          <thead><tr><th>Milestone</th><th>Type</th><th>Amount</th><th>Milestone date</th><th>PO #</th><th>Status</th><th>Invoice #</th></tr></thead>
           <tbody>${msRows}</tbody>
         </table>
       </div>
@@ -965,6 +981,7 @@ function renderFinance(){
     <td>${fmtD(m.dueDate)}</td>
     <td class="ms-amount">${fmtM(m.amount)}</td>
     <td style="font-size:12px;color:#0F6E56">${m.invoiceNo||'—'}</td>
+    <td style="font-size:12px;color:#854F0B">${m.paymentDueDate?fmtD(m.paymentDueDate)+(m.paymentDueDate&&!m.paymentDate&&daysUntil(m.paymentDueDate)<0?'<span class="overdue" style="margin-left:4px">overdue</span>':''):'—'}</td>
     <td style="font-size:12px;color:#534AB7">${m.paymentDate?fmtD(m.paymentDate):'—'}</td>
     <td><select class="status-sel ${statusColor[m.billingStatus]}" onchange="handleStatusChange('${c.id}','${m.id}',this.value,this);setTimeout(renderFinance,100)">
       <option value="pending" ${m.billingStatus==='pending'?'selected':''}>Pending approval</option>
@@ -978,9 +995,9 @@ function renderFinance(){
     ${readyAmt>0?`<div class="notify-banner green"><i class="ti ti-check-circle" style="font-size:18px"></i><div><strong>${fmtM(readyAmt)} ready to invoice</strong> — approved. Proceed without calling for approval.</div></div>`:''}
     ${!rows.length?'<div class="empty-state"><i class="ti ti-filter-off"></i>No milestones match this filter.</div>':`
     <table class="finance-table">
-      <thead><tr><th>Client</th><th>Project</th><th>Milestone</th><th>Type</th><th>PO #</th><th>Due date</th><th>Amount</th><th>Invoice #</th><th>Payment date</th><th>Status</th></tr></thead>
+      <thead><tr><th>Client</th><th>Project</th><th>Milestone</th><th>Type</th><th>PO #</th><th>Milestone date</th><th>Amount</th><th>Invoice #</th><th>Payment due</th><th>Payment date</th><th>Status</th></tr></thead>
       <tbody>${tableRows}</tbody>
-      <tfoot><tr class="total-row"><td colspan="6" style="text-align:right;font-size:12px;color:#999">Total shown</td><td class="ms-amount">${fmtM(rows.reduce((s,r)=>s+Number(r.m.amount),0))}</td><td colspan="3"></td></tr></tfoot>
+      <tfoot><tr class="total-row"><td colspan="6" style="text-align:right;font-size:12px;color:#999">Total shown</td><td class="ms-amount">${fmtM(rows.reduce((s,r)=>s+Number(r.m.amount),0))}</td><td colspan="4"></td></tr></tfoot>
     </table>`}`;
 }
 
@@ -997,7 +1014,7 @@ function renderUpcoming(){
     if(!items.length)return'';
     return`<div class="section-title" style="color:${color}">${title}</div>
     <table class="finance-table" style="margin-bottom:1.5rem">
-      <thead><tr><th>Client</th><th>Project</th><th>Milestone</th><th>PO #</th><th>Amount</th><th>Due date</th><th>Status</th></tr></thead>
+      <thead><tr><th>Client</th><th>Project</th><th>Milestone</th><th>PO #</th><th>Amount</th><th>Milestone date</th><th>Status</th></tr></thead>
       <tbody>${items.map(({c,m})=>`<tr>
         <td><strong>${c.client}</strong></td><td>${c.project}</td><td>${m.name}${dueBadge(m)}</td>
         <td style="color:#185FA5;font-size:12px">${c.po||'—'}</td>
@@ -1012,7 +1029,25 @@ function renderUpcoming(){
       </tr>`).join('')}</tbody>
     </table>`;
   }
-  const content=section('Overdue',rows.filter(r=>r.d<0),'#A32D2D')+section('Due this week',rows.filter(r=>r.d>=0&&r.d<=7),'#854F0B')+section('Due this month (8–30 days)',rows.filter(r=>r.d>7&&r.d<=30),'#185FA5')+section('Next 30–60 days',rows.filter(r=>r.d>30&&r.d<=60),'#888');
+  // Also collect invoiced milestones with overdue payment due dates
+  let payRows=[];
+  contracts.forEach(c=>c.milestones.forEach(m=>{
+    if(m.billingStatus==='invoiced'&&m.paymentDueDate&&daysUntil(m.paymentDueDate)<0)
+      payRows.push({c,m});
+  }));
+  payRows.sort((a,b)=>(a.m.paymentDueDate||'').localeCompare(b.m.paymentDueDate||''));
+  const paySection=payRows.length?`<div class="section-title" style="color:#A32D2D"><i class="ti ti-clock-dollar" style="font-size:15px"></i> Payment overdue</div>
+    <table class="finance-table" style="margin-bottom:1.5rem">
+      <thead><tr><th>Client</th><th>Project</th><th>Milestone</th><th>Invoice #</th><th>Amount</th><th>Invoice date</th><th>Payment due</th></tr></thead>
+      <tbody>${payRows.map(({c,m})=>`<tr>
+        <td><strong>${c.client}</strong></td><td>${c.project}</td><td>${m.name}</td>
+        <td style="color:#0F6E56;font-size:12px">${m.invoiceNo||'—'}</td>
+        <td class="ms-amount">${fmtM(m.amount)}</td>
+        <td style="font-size:12px">${fmtD(m.invoiceDate)}</td>
+        <td><span class="overdue">${Math.abs(daysUntil(m.paymentDueDate))}d overdue</span> ${fmtD(m.paymentDueDate)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`:'';
+  const content=paySection+section('Overdue',rows.filter(r=>r.d<0),'#A32D2D')+section('Due this week',rows.filter(r=>r.d>=0&&r.d<=7),'#854F0B')+section('Due this month (8–30 days)',rows.filter(r=>r.d>7&&r.d<=30),'#185FA5')+section('Next 30–60 days',rows.filter(r=>r.d>30&&r.d<=60),'#888');
   document.getElementById('upcoming-content').innerHTML=content||'<div class="empty-state"><i class="ti ti-calendar-check"></i>Nothing due in the next 60 days.</div>';
 }
 
@@ -1046,7 +1081,7 @@ function renderPayments(){
     </div>
     ${!invoiced.length?'<div class="empty-state"><i class="ti ti-coin"></i>No invoiced milestones yet.</div>':`
     <table class="finance-table">
-      <thead><tr><th>Client</th><th>Milestone</th><th>PO #</th><th>Invoice #</th><th>Invoice date</th><th>Amount</th><th>Payment date</th><th>Ref</th><th>Status</th></tr></thead>
+      <thead><tr><th>Client</th><th>Milestone</th><th>PO #</th><th>Invoice #</th><th>Invoice date</th><th>Amount</th><th>Payment due</th><th>Payment date</th><th>Ref</th><th>Status</th></tr></thead>
       <tbody>${invoiced.map(({c,m})=>`<tr>
         <td><strong>${c.client}</strong><br><span style="font-size:11px;color:#888">${c.project}</span></td>
         <td>${m.name}</td>
@@ -1054,11 +1089,12 @@ function renderPayments(){
         <td style="font-size:12px;color:#0F6E56">${m.invoiceNo||'—'}</td>
         <td style="font-size:12px">${fmtD(m.invoiceDate)}</td>
         <td class="ms-amount">${fmtM(m.amount)}</td>
-        <td style="font-size:12px;color:${m.paymentDate?'#534AB7':'#A32D2D'}">${m.paymentDate?fmtD(m.paymentDate):'Awaiting payment'}</td>
+        <td style="font-size:12px;color:${m.paymentDueDate&&!m.paymentDate&&daysUntil(m.paymentDueDate)<0?'#A32D2D':'#854F0B'}">${m.paymentDueDate?fmtD(m.paymentDueDate):'—'}</td>
+        <td style="font-size:12px;color:${m.paymentDate?'#534AB7':'#aaa'}">${m.paymentDate?fmtD(m.paymentDate):'—'}</td>
         <td style="font-size:12px;color:#888">${m.paymentRef||'—'}</td>
         <td><span class="badge ${m.billingStatus==='paid'?'active':'paused'}">${m.billingStatus==='paid'?'Paid':'Invoiced'}</span></td>
       </tr>`).join('')}</tbody>
-      <tfoot><tr class="total-row"><td colspan="5" style="text-align:right;font-size:12px;color:#999">Total</td><td class="ms-amount">${fmtM(totalInv)}</td><td colspan="3"></td></tr></tfoot>
+      <tfoot><tr class="total-row"><td colspan="5" style="text-align:right;font-size:12px;color:#999">Total</td><td class="ms-amount">${fmtM(totalInv)}</td><td colspan="4"></td></tr></tfoot>
     </table>`}`;
 }
 
@@ -1251,7 +1287,8 @@ function saveContract(){
       billingStatus:m.billingStatus||'pending',
       invoiceNo:m.invoiceNo||'',invoiceDate:m.invoiceDate||'',
       paymentDate:m.paymentDate||'',paymentRef:m.paymentRef||'',
-      deferReason:m.deferReason||'',deferDate:m.deferDate||''
+      deferReason:m.deferReason||'',deferDate:m.deferDate||'',
+      paymentDueDate:m.paymentDueDate||''
     };
   });
   const data={client,project,value:Number(document.getElementById('f-value').value)||0,po:document.getElementById('f-po').value.trim(),status:document.getElementById('f-status').value,notes:document.getElementById('f-notes').value.trim(),milestones};
