@@ -653,12 +653,14 @@ async function saveMilestoneToSP(m,contractSpId){
     const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
     const siteId=window._siteId;if(!siteId)return;
     const contractIdNum=parseInt(contractSpId,10);
-    const fields={MilestoneName:m.name,ContractId:isNaN(contractIdNum)?null:contractIdNum,MilestoneType:m.type,Amount:m.amount,
-      DueDate:m.dueDate||null,BillingStatus:m.billingStatus,
-      InvoiceNo:m.invoiceNo||'',InvoiceDate:m.invoiceDate||null,
-      PaymentDate:m.paymentDate||null,PaymentRef:m.paymentRef||'',
-      DeferReason:m.deferReason||'',DeferDate:m.deferDate||null,
-      PaymentDueDate:m.paymentDueDate||null};
+    // Helper: convert YYYY-MM-DD string to ISO datetime SP accepts, or null
+    const toSpDate=d=>(d?d+'T00:00:00Z':null);
+    const fields={MilestoneName:m.name,ContractId:isNaN(contractIdNum)?null:contractIdNum,MilestoneType:m.type,Amount:Number(m.amount)||0,
+      DueDate:toSpDate(m.dueDate),BillingStatus:m.billingStatus,
+      InvoiceNo:m.invoiceNo||'',InvoiceDate:toSpDate(m.invoiceDate),
+      PaymentDate:toSpDate(m.paymentDate),PaymentRef:m.paymentRef||'',
+      DeferReason:m.deferReason||'',DeferDate:toSpDate(m.deferDate),
+      PaymentDueDate:toSpDate(m.paymentDueDate)};
     const spId=m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null);
     if(spId){
       await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items/${spId}/fields`,{method:'PATCH',headers,body:JSON.stringify(fields)});
