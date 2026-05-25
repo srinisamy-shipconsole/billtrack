@@ -1184,7 +1184,7 @@ function editContract(id){
   document.getElementById('f-status').value=c.status;
   document.getElementById('f-notes').value=c.notes||'';
   document.getElementById('recurring-gen-section').classList.remove('show');
-  tempMilestones=c.milestones.map(m=>({...m}));
+  tempMilestones=c.milestones.map(m=>({...m,_originalId:m.id}));
   renderMsEntries();
   document.getElementById('contract-modal').classList.add('open');
 }
@@ -1194,18 +1194,23 @@ function handleModalBg(e,id){if(e.target===document.getElementById(id))closeModa
 
 function renderMsEntries(){
   document.getElementById('ms-entries').innerHTML=tempMilestones.map((m,i)=>`
-    <div class="ms-entry">
+    <div class="ms-entry" data-ms-index="${i}">
       <div class="ms-entry-top">
-        <input class="form-input sm" placeholder="Milestone name" value="${m.name||''}" oninput="tempMilestones[${i}].name=this.value">
-        <input class="form-input sm" type="number" placeholder="0" value="${m.amount||''}" oninput="tempMilestones[${i}].amount=this.value">
-        <input class="form-input sm" type="date" value="${m.dueDate||''}" oninput="tempMilestones[${i}].dueDate=this.value">
-        <select class="form-input sm" onchange="tempMilestones[${i}].type=this.value">
+        <input class="form-input sm" placeholder="Milestone name" value="${(m.name||'').replace(/"/g,'&quot;')}" data-field="name" data-index="${i}" onchange="updateMsField(${i},'name',this.value)">
+        <input class="form-input sm" type="number" placeholder="0" value="${m.amount||''}" data-field="amount" data-index="${i}" onchange="updateMsField(${i},'amount',this.value)">
+        <input class="form-input sm" type="date" value="${m.dueDate||''}" data-field="dueDate" data-index="${i}" onchange="updateMsField(${i},'dueDate',this.value)">
+        <select class="form-input sm" data-index="${i}" onchange="updateMsField(${i},'type',this.value)">
           <option value="one-time" ${m.type!=='recurring'?'selected':''}>One-time</option>
           <option value="recurring" ${m.type==='recurring'?'selected':''}>Recurring</option>
         </select>
         <button class="del-btn" onclick="removeMsEntry(${i})" title="Remove"><i class="ti ti-x"></i></button>
       </div>
     </div>`).join('');
+}
+function updateMsField(i,field,value){
+  if(i>=0&&i<tempMilestones.length){
+    tempMilestones[i][field]=value;
+  }
 }
 function addMsEntry(){tempMilestones.push({id:'tm'+Date.now(),name:'',type:'one-time',amount:'',dueDate:'',billingStatus:'pending'});renderMsEntries();}
 function removeMsEntry(i){tempMilestones.splice(i,1);renderMsEntries();}
@@ -1235,8 +1240,8 @@ function saveContract(){
   const client=document.getElementById('f-client').value.trim();
   const project=document.getElementById('f-project').value.trim();
   if(!client||!project){alert('Client name and project name are required.');return;}
-  const milestones=tempMilestones.map(m=>({
-    id:m.id||('m'+Date.now()+Math.random()),
+  const milestones=tempMilestones.map((m,idx)=>({
+    id:m._originalId||m.id||('m'+Date.now()+idx),
     name:m.name||'Untitled milestone',type:m.type||'one-time',
     amount:Number(m.amount)||0,dueDate:m.dueDate||'',
     billingStatus:m.billingStatus||'pending',
