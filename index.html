@@ -653,8 +653,8 @@ async function saveMilestoneToSP(m,contractSpId){
     const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
     const siteId=window._siteId;if(!siteId)return;
     const contractIdNum=parseInt(contractSpId,10);
-    // Helper: convert YYYY-MM-DD string to ISO datetime SP accepts, or null
-    const toSpDate=d=>(d?d+'T00:00:00Z':null);
+    // SP Date-only columns require plain YYYY-MM-DD strings (no time component)
+    const toSpDate=d=>(d||null);
     const fields={MilestoneName:m.name,ContractId:isNaN(contractIdNum)?null:contractIdNum,MilestoneType:m.type,Amount:Number(m.amount)||0,
       DueDate:toSpDate(m.dueDate),BillingStatus:m.billingStatus,
       InvoiceNo:m.invoiceNo||'',InvoiceDate:toSpDate(m.invoiceDate),
@@ -799,7 +799,9 @@ function confirmDefer(){
   const date=document.getElementById('defer-date').value;
   const c=contracts.find(x=>x.id===cid);
   const m=c?.milestones.find(x=>x.id===mid);
-  if(m){m.deferReason=reason;m.deferDate=date;}
+  if(m){m.deferReason=reason;m.deferDate=date;m.billingStatus='deferred';}
+  saveContracts();
+  if(window._siteId&&c&&m)saveMilestoneToSP(m,c._spId);
   applyStatus(cid,mid,'deferred',sel,prev,`Reason: ${reason||'not specified'}${date?' | New target: '+fmtD(date):''}`);
   document.getElementById('deferred-modal').classList.remove('open');
   pendingStatusChange=null;
@@ -818,16 +820,21 @@ function confirmInvoiced(){
   if(!pendingStatusChange)return;
   const{cid,mid,sel,prev}=pendingStatusChange;
   const invNo=document.getElementById('inv-number').value.trim();
-  const invDate=document.getElementById('inv-date').value;
+  const invDate=(document.getElementById('inv-date').value||'').trim();
   const c=contracts.find(x=>x.id===cid);
   const m=c?.milestones.find(x=>x.id===mid);
   if(m){
-    m.invoiceNo=invNo;m.invoiceDate=invDate;
+    m.invoiceNo=invNo;
+    m.invoiceDate=invDate;
     const terms=Number(settings.paymentTerms)||45;
     const invDt=new Date(invDate+'T00:00:00');
     invDt.setDate(invDt.getDate()+terms);
     m.paymentDueDate=invDt.toISOString().split('T')[0];
+    m.billingStatus='invoiced';
   }
+  // Save to SP directly here with all fields set, before applyStatus re-finds the object
+  saveContracts();
+  if(window._siteId&&c&&m)saveMilestoneToSP(m,c._spId);
   applyStatus(cid,mid,'invoiced',sel,prev,`Invoice: ${invNo||'no number entered'} | Date: ${fmtD(invDate)}`);
   document.getElementById('invoiced-modal').classList.remove('open');
   pendingStatusChange=null;
@@ -849,7 +856,9 @@ function confirmPaid(){
   const payRef=document.getElementById('paid-ref').value.trim();
   const c=contracts.find(x=>x.id===cid);
   const m=c?.milestones.find(x=>x.id===mid);
-  if(m){m.paymentDate=payDate;m.paymentRef=payRef;}
+  if(m){m.paymentDate=payDate;m.paymentRef=payRef;m.billingStatus='paid';}
+  saveContracts();
+  if(window._siteId&&c&&m)saveMilestoneToSP(m,c._spId);
   applyStatus(cid,mid,'paid',sel,prev,`Payment date: ${fmtD(payDate)}${payRef?' | Ref: '+payRef:''}`);
   document.getElementById('paid-modal').classList.remove('open');
   pendingStatusChange=null;
@@ -1239,7 +1248,7 @@ function renderMsEntries(){
       <div class="ms-entry-top">
         <input class="form-input sm" placeholder="Milestone name" value="${m.name||''}" oninput="tempMilestones[${i}].name=this.value">
         <input class="form-input sm" type="number" placeholder="0" value="${m.amount||''}" oninput="tempMilestones[${i}].amount=this.value">
-        <input class="form-input sm" type="date" value="${m.dueDate||''}" oninput="tempMilestones[${i}].dueDate=this.value">
+        <input class="form-input sm" type="date" value="${m.dueDate||''}" onchange="tempMilestones[${i}].dueDate=this.value">
         <select class="form-input sm" onchange="tempMilestones[${i}].type=this.value">
           <option value="one-time" ${m.type!=='recurring'?'selected':''}>One-time</option>
           <option value="recurring" ${m.type==='recurring'?'selected':''}>Recurring</option>
