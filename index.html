@@ -644,13 +644,17 @@ async function saveMilestoneToSP(m,contractSpId){
     const token=await getToken();if(!token)return;
     const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
     const siteId=window._siteId;if(!siteId)return;
-    const fields={MilestoneName:m.name,ContractId:Number(contractSpId),MilestoneType:m.type,Amount:m.amount,
+    const contractIdNum=parseInt(contractSpId,10);
+    const fields={MilestoneName:m.name,ContractId:isNaN(contractIdNum)?null:contractIdNum,MilestoneType:m.type,Amount:m.amount,
       DueDate:m.dueDate||null,BillingStatus:m.billingStatus,
       InvoiceNo:m.invoiceNo||'',InvoiceDate:m.invoiceDate||null,
       PaymentDate:m.paymentDate||null,PaymentRef:m.paymentRef||'',
       DeferReason:m.deferReason||'',DeferDate:m.deferDate||null};
-    if(m._spId){
-      await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items/${m._spId}/fields`,{method:'PATCH',headers,body:JSON.stringify(fields)});
+    // Use _spId for PATCH; also treat a purely numeric id as a valid SP item ID
+    const spId=m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null);
+    if(spId){
+      await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items/${spId}/fields`,{method:'PATCH',headers,body:JSON.stringify(fields)});
+      m._spId=spId;
     }else{
       const res=await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items`,{method:'POST',headers,body:JSON.stringify({fields})});
       const data=await res.json();m._spId=String(data.id);m.id=m._spId;
@@ -1184,7 +1188,8 @@ function editContract(id){
   document.getElementById('f-status').value=c.status;
   document.getElementById('f-notes').value=c.notes||'';
   document.getElementById('recurring-gen-section').classList.remove('show');
-  tempMilestones=c.milestones.map(m=>({...m,_originalId:m.id}));
+  // Spread all fields including _spId; also ensure _spId is set for SP-loaded milestones whose id IS the SP item ID
+  tempMilestones=c.milestones.map(m=>({...m,_spId:m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null)}));
   renderMsEntries();
   document.getElementById('contract-modal').classList.add('open');
 }
@@ -1194,23 +1199,18 @@ function handleModalBg(e,id){if(e.target===document.getElementById(id))closeModa
 
 function renderMsEntries(){
   document.getElementById('ms-entries').innerHTML=tempMilestones.map((m,i)=>`
-    <div class="ms-entry" data-ms-index="${i}">
+    <div class="ms-entry">
       <div class="ms-entry-top">
-        <input class="form-input sm" placeholder="Milestone name" value="${(m.name||'').replace(/"/g,'&quot;')}" data-field="name" data-index="${i}" onchange="updateMsField(${i},'name',this.value)">
-        <input class="form-input sm" type="number" placeholder="0" value="${m.amount||''}" data-field="amount" data-index="${i}" onchange="updateMsField(${i},'amount',this.value)">
-        <input class="form-input sm" type="date" value="${m.dueDate||''}" data-field="dueDate" data-index="${i}" onchange="updateMsField(${i},'dueDate',this.value)">
-        <select class="form-input sm" data-index="${i}" onchange="updateMsField(${i},'type',this.value)">
+        <input class="form-input sm" placeholder="Milestone name" value="${m.name||''}" oninput="tempMilestones[${i}].name=this.value">
+        <input class="form-input sm" type="number" placeholder="0" value="${m.amount||''}" oninput="tempMilestones[${i}].amount=this.value">
+        <input class="form-input sm" type="date" value="${m.dueDate||''}" oninput="tempMilestones[${i}].dueDate=this.value">
+        <select class="form-input sm" onchange="tempMilestones[${i}].type=this.value">
           <option value="one-time" ${m.type!=='recurring'?'selected':''}>One-time</option>
           <option value="recurring" ${m.type==='recurring'?'selected':''}>Recurring</option>
         </select>
         <button class="del-btn" onclick="removeMsEntry(${i})" title="Remove"><i class="ti ti-x"></i></button>
       </div>
     </div>`).join('');
-}
-function updateMsField(i,field,value){
-  if(i>=0&&i<tempMilestones.length){
-    tempMilestones[i][field]=value;
-  }
 }
 function addMsEntry(){tempMilestones.push({id:'tm'+Date.now(),name:'',type:'one-time',amount:'',dueDate:'',billingStatus:'pending'});renderMsEntries();}
 function removeMsEntry(i){tempMilestones.splice(i,1);renderMsEntries();}
@@ -1240,15 +1240,26 @@ function saveContract(){
   const client=document.getElementById('f-client').value.trim();
   const project=document.getElementById('f-project').value.trim();
   if(!client||!project){alert('Client name and project name are required.');return;}
-  const milestones=tempMilestones.map((m,idx)=>({
-    id:m._originalId||m.id||('m'+Date.now()+idx),
-    name:m.name||'Untitled milestone',type:m.type||'one-time',
-    amount:Number(m.amount)||0,dueDate:m.dueDate||'',
-    billingStatus:m.billingStatus||'pending',
-    invoiceNo:m.invoiceNo||'',invoiceDate:m.invoiceDate||'',
-    paymentDate:m.paymentDate||'',paymentRef:m.paymentRef||'',
-    deferReason:m.deferReason||'',deferDate:m.deferDate||''
-  }));
+
+  // Validate milestone name uniqueness within this contract
+  const msNames=tempMilestones.map(m=>(m.name||'').trim().toLowerCase()).filter(n=>n);
+  const dupes=msNames.filter((n,i)=>msNames.indexOf(n)!==i);
+  if(dupes.length>0){alert('Duplicate milestone name: "'+tempMilestones.find(m=>dupes.includes((m.name||'').trim().toLowerCase())).name+'"\nEach milestone name must be unique within a contract.');return;}
+
+  const milestones=tempMilestones.map(m=>{
+    // Preserve the SP item ID — use _spId, or a purely numeric id (SP item IDs are numbers)
+    const spId=m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null);
+    return {
+      id:m.id||('m'+Date.now()+Math.random()),
+      _spId:spId,
+      name:m.name||'Untitled milestone',type:m.type||'one-time',
+      amount:Number(m.amount)||0,dueDate:m.dueDate||'',
+      billingStatus:m.billingStatus||'pending',
+      invoiceNo:m.invoiceNo||'',invoiceDate:m.invoiceDate||'',
+      paymentDate:m.paymentDate||'',paymentRef:m.paymentRef||'',
+      deferReason:m.deferReason||'',deferDate:m.deferDate||''
+    };
+  });
   const data={client,project,value:Number(document.getElementById('f-value').value)||0,po:document.getElementById('f-po').value.trim(),status:document.getElementById('f-status').value,notes:document.getElementById('f-notes').value.trim(),milestones};
   if(editingId){const idx=contracts.findIndex(c=>c.id===editingId);contracts[idx]={...contracts[idx],...data};}
   else contracts.push({id:'c'+Date.now(),...data});
