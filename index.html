@@ -650,7 +650,6 @@ async function saveMilestoneToSP(m,contractSpId){
       InvoiceNo:m.invoiceNo||'',InvoiceDate:m.invoiceDate||null,
       PaymentDate:m.paymentDate||null,PaymentRef:m.paymentRef||'',
       DeferReason:m.deferReason||'',DeferDate:m.deferDate||null};
-    // Use _spId for PATCH; also treat a purely numeric id as a valid SP item ID
     const spId=m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null);
     if(spId){
       await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/Milestones/items/${spId}/fields`,{method:'PATCH',headers,body:JSON.stringify(fields)});
@@ -886,7 +885,7 @@ function updateNavBadges(){
   pb.style.display=unpaid>0?'':'none';pb.textContent=unpaid;
 }
 
-function contractHTML(c){
+function contractHTML(c,prefix=''){
   const total=c.milestones.reduce((s,m)=>s+Number(m.amount),0);
   const inv=c.milestones.filter(m=>['invoiced','paid'].includes(m.billingStatus)).reduce((s,m)=>s+Number(m.amount),0);
   const msRows=c.milestones.length===0
@@ -921,10 +920,10 @@ function contractHTML(c){
         <span class="badge ${c.status}">${c.status.charAt(0).toUpperCase()+c.status.slice(1)}</span>
         <button class="action-btn" onclick="editContract('${c.id}')" title="Edit"><i class="ti ti-edit"></i></button>
         <button class="action-btn" onclick="deleteContract('${c.id}')" title="Delete"><i class="ti ti-trash"></i></button>
-        <button class="action-btn" onclick="toggleContract('body-${c.id}','chev-${c.id}')" title="Expand"><i class="ti ti-chevron-down chevron" id="chev-${c.id}"></i></button>
+        <button class="action-btn" onclick="toggleContract('${prefix}body-${c.id}','${prefix}chev-${c.id}')" title="Expand"><i class="ti ti-chevron-down chevron" id="${prefix}chev-${c.id}"></i></button>
       </div>
     </div>
-    <div id="body-${c.id}" style="display:none">
+    <div id="${prefix}body-${c.id}" style="display:none">
       <div class="ms-table-wrap">
         <table class="ms-table">
           <thead><tr><th>Milestone</th><th>Type</th><th>Amount</th><th>Due date</th><th>PO #</th><th>Status</th><th>Invoice #</th></tr></thead>
@@ -938,7 +937,7 @@ function contractHTML(c){
 function renderContractList(id){
   const el=document.getElementById(id);
   if(!contracts.length){el.innerHTML='<div class="empty-state"><i class="ti ti-file-off"></i>No contracts yet.<br>Click "Add contract" to get started.</div>';return;}
-  el.innerHTML=contracts.map(contractHTML).join('');
+  el.innerHTML=contracts.map(c=>contractHTML(c,id+'-')).join('');
 }
 function toggleContract(bid,cid){const el=document.getElementById(bid),ch=document.getElementById(cid);const o=el.style.display!=='none';el.style.display=o?'none':'block';ch.classList.toggle('open',!o);}
 
@@ -1188,7 +1187,6 @@ function editContract(id){
   document.getElementById('f-status').value=c.status;
   document.getElementById('f-notes').value=c.notes||'';
   document.getElementById('recurring-gen-section').classList.remove('show');
-  // Spread all fields including _spId; also ensure _spId is set for SP-loaded milestones whose id IS the SP item ID
   tempMilestones=c.milestones.map(m=>({...m,_spId:m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null)}));
   renderMsEntries();
   document.getElementById('contract-modal').classList.add('open');
@@ -1240,16 +1238,12 @@ function saveContract(){
   const client=document.getElementById('f-client').value.trim();
   const project=document.getElementById('f-project').value.trim();
   if(!client||!project){alert('Client name and project name are required.');return;}
-
-  // Validate milestone name uniqueness within this contract
   const msNames=tempMilestones.map(m=>(m.name||'').trim().toLowerCase()).filter(n=>n);
   const dupes=msNames.filter((n,i)=>msNames.indexOf(n)!==i);
   if(dupes.length>0){alert('Duplicate milestone name: "'+tempMilestones.find(m=>dupes.includes((m.name||'').trim().toLowerCase())).name+'"\nEach milestone name must be unique within a contract.');return;}
-
   const milestones=tempMilestones.map(m=>{
-    // Preserve the SP item ID — use _spId, or a purely numeric id (SP item IDs are numbers)
     const spId=m._spId||(m.id&&/^\d+$/.test(String(m.id))?String(m.id):null);
-    return {
+    return{
       id:m.id||('m'+Date.now()+Math.random()),
       _spId:spId,
       name:m.name||'Untitled milestone',type:m.type||'one-time',
